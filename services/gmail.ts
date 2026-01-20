@@ -3,9 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type NotificationType = 'sale' | 'message' | 'offer' | 'system';
 
-export interface FlippoNotification {
+export interface SellyNotification {
     id: string;
-    platform: 'vinted' | 'ebay' | 'subito' | 'flippo';
+    platform: 'vinted' | 'ebay' | 'subito' | 'selly';
     type: NotificationType;
     title: string;
     body: string;
@@ -14,7 +14,7 @@ export interface FlippoNotification {
     actionUrl?: string;
 }
 
-const NOTIFICATIONS_KEY = '@flippo_notifications';
+const NOTIFICATIONS_KEY = '@selly_notifications';
 
 // Mock Data logic for simulation without real OAuth
 const MOCK_EMAILS = [
@@ -25,14 +25,14 @@ const MOCK_EMAILS = [
 
 export const GmailService = {
     // In a real app, this would use Google Sign-In token
-    checkForNewEmails: async (): Promise<FlippoNotification[]> => {
+    checkForNewEmails: async (): Promise<SellyNotification[]> => {
         // SIMULATION: Randomly generating notifications based on "Email Detection"
         const shouldFind = Math.random() > 0.5;
         if (!shouldFind) return [];
 
         const template = MOCK_EMAILS[Math.floor(Math.random() * MOCK_EMAILS.length)];
 
-        const newNotif: FlippoNotification = {
+        const newNotif: SellyNotification = {
             id: Date.now().toString(),
             platform: template.platform as any,
             type: template.type as any,
@@ -47,12 +47,12 @@ export const GmailService = {
         return [newNotif];
     },
 
-    getNotifications: async (): Promise<FlippoNotification[]> => {
+    getNotifications: async (): Promise<SellyNotification[]> => {
         const json = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
         return json ? JSON.parse(json) : [];
     },
 
-    addNotification: async (notif: FlippoNotification) => {
+    addNotification: async (notif: SellyNotification) => {
         const current = await GmailService.getNotifications();
         const updated = [notif, ...current];
         await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));

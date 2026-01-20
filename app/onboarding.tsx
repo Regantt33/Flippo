@@ -3,9 +3,10 @@ import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +35,10 @@ export default function OnboardingScreen() {
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
 
+    // Profile State
+    const [name, setName] = useState('');
+    const [avatar, setAvatar] = useState<string | null>(null);
+
     useEffect(() => {
         loadMarketplaces();
         if (params.step) setStep(parseInt(params.step as string));
@@ -41,18 +46,37 @@ export default function OnboardingScreen() {
 
     const loadMarketplaces = async () => {
         const m = await SettingsService.getMarketplaces();
-        setMarketplaces(m || []);
+        const connected = await AuthService.getConnections();
+        setMarketplaces(m?.map(item => ({
+            ...item,
+            isLoggedIn: connected.includes(item.id)
+        })) || []);
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
+        if (step === 2) {
+            // Save initial profile
+            await SettingsService.updateProfile({ name, avatar: avatar || undefined });
+        }
+
         Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
-            if (step < 3) {
+            if (step < 4) {
                 setStep(step + 1);
                 Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
             } else {
                 router.replace('/(tabs)');
             }
         });
+    };
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+        if (!result.canceled) setAvatar(result.assets[0].uri);
     };
 
     const openLogin = async (marketplaceId: string) => {
@@ -65,7 +89,7 @@ export default function OnboardingScreen() {
 
     const StepIndicator = () => (
         <View style={styles.indicatorContainer}>
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3, 4].map(i => (
                 <View key={i} style={[styles.indicator, step === i && styles.indicatorActive]} />
             ))}
         </View>
@@ -78,10 +102,47 @@ export default function OnboardingScreen() {
                 <FontAwesome name="rocket" size={80} color="#1C1C1E" />
             </View>
             <Text style={styles.title}>Vendi Ovunque,{"\n"}Senza Sforzo.</Text>
-            <Text style={styles.subtitle}>Flippo automatizza le tue vendite sui principali marketplace di moda e tech.</Text>
+            <Text style={styles.subtitle}>Selly automatizza le tue vendite sui principali marketplace di moda e tech.</Text>
+
+            <View style={styles.spacer} />
 
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
                 <Text style={styles.mainBtnText}>Inizia Ora</Text>
+            </PremiumButton>
+        </Animated.View>
+    );
+
+    const ProfileStep = () => (
+        <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+            <Text style={styles.stepTitle}>Chi sei?</Text>
+            <Text style={styles.stepSubtitle}>Personalizza il tuo profilo Selly per un'esperienza su misura.</Text>
+
+            <View style={styles.profileSection}>
+                <PremiumButton onPress={pickImage} style={styles.avatarPicker}>
+                    {avatar ? (
+                        <Image source={{ uri: avatar }} style={styles.avatarImg} />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <FontAwesome name="camera" size={24} color={Colors.light.primary} />
+                        </View>
+                    )}
+                </PremiumButton>
+
+                <View style={styles.inputCard}>
+                    <Text style={styles.inputLabel}>NOME VISUALIZZATO</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Es: Marco Rossi"
+                        value={name}
+                        onChangeText={setName}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.spacer} />
+
+            <PremiumButton style={styles.mainBtn} onPress={handleNext}>
+                <Text style={styles.mainBtnText}>Continua</Text>
             </PremiumButton>
         </Animated.View>
     );
@@ -93,19 +154,32 @@ export default function OnboardingScreen() {
 
             <ScrollView style={styles.marketList} showsVerticalScrollIndicator={false}>
                 {marketplaces.map((m) => (
-                    <PremiumButton key={m.id} style={styles.marketCard} onPress={() => openLogin(m.id)}>
+                    <PremiumButton
+                        key={m.id}
+                        style={[styles.marketCard, m.isLoggedIn && { opacity: 0.7 }]}
+                        onPress={() => m.isLoggedIn ? null : openLogin(m.id)}
+                        disabled={m.isLoggedIn}
+                    >
                         <MarketplaceLogo id={m.id} style={styles.marketLogo} />
                         <View style={styles.marketInfo}>
                             <Text style={styles.marketName}>{m.name}</Text>
-                            <Text style={styles.marketAction}>Tocca per accedere</Text>
+                            <Text style={[styles.marketAction, m.isLoggedIn && { color: '#34C759' }]}>
+                                {m.isLoggedIn ? 'Account collegato' : 'Tocca per accedere'}
+                            </Text>
                         </View>
-                        <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
+                        {m.isLoggedIn ? (
+                            <FontAwesome name="check-circle" size={18} color="#34C759" />
+                        ) : (
+                            <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
+                        )}
                     </PremiumButton>
                 ))}
             </ScrollView>
 
+            <View style={styles.spacer} />
+
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Continua</Text>
+                <Text style={styles.mainBtnText}>Ho finito</Text>
             </PremiumButton>
         </Animated.View>
     );
@@ -118,8 +192,10 @@ export default function OnboardingScreen() {
             <Text style={styles.title}>Sei Pronto!</Text>
             <Text style={styles.subtitle}>Il tuo assistente personale alle vendite è configurato e pronto all'azione.</Text>
 
+            <View style={styles.spacer} />
+
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Vai alla Dashboard</Text>
+                <Text style={styles.mainBtnText}>Apri la Dashboard</Text>
             </PremiumButton>
         </Animated.View>
     );
@@ -130,11 +206,12 @@ export default function OnboardingScreen() {
                 <StepIndicator />
             </View>
 
-            <View style={styles.content}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
                 {step === 1 && <WelcomeStep />}
-                {step === 2 && <ConnectStep />}
-                {step === 3 && <FinalStep />}
-            </View>
+                {step === 2 && <ProfileStep />}
+                {step === 3 && <ConnectStep />}
+                {step === 4 && <FinalStep />}
+            </KeyboardAvoidingView>
         </View>
     );
 }
@@ -142,23 +219,34 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { paddingTop: 60, alignItems: 'center' },
-    content: { flex: 1, paddingHorizontal: 40, justifyContent: 'center' },
+    content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center' },
 
     indicatorContainer: { flexDirection: 'row', gap: 8 },
     indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F2F2F7' },
     indicatorActive: { width: 24, backgroundColor: '#1C1C1E' },
 
-    stepContainer: { alignItems: 'center' },
+    stepContainer: { alignItems: 'center', width: '100%' },
     heroImageContainer: { width: 200, height: 200, justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
     blob: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: '#F8F9FB' },
 
-    title: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', textAlign: 'center', letterSpacing: -1, lineHeight: 38 },
+    title: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', textAlign: 'center', letterSpacing: -1.2, lineHeight: 40 },
     subtitle: { fontSize: 16, color: '#8E8E93', textAlign: 'center', marginTop: 16, lineHeight: 24, fontWeight: '500' },
 
-    stepTitle: { fontSize: 28, fontWeight: '900', color: '#1C1C1E', alignSelf: 'flex-start', letterSpacing: -0.5 },
-    stepSubtitle: { fontSize: 15, color: '#8E8E93', alignSelf: 'flex-start', marginTop: 8, marginBottom: 32, fontWeight: '500' },
+    spacer: { height: 48 }, // Fix for "minimo spazio tra testo e pulsanti"
 
-    marketList: { width: '100%', maxHeight: 350, marginBottom: 32 },
+    stepTitle: { fontSize: 28, fontWeight: '900', color: '#1C1C1E', alignSelf: 'flex-start', letterSpacing: -0.5 },
+    stepSubtitle: { fontSize: 15, color: '#8E8E93', alignSelf: 'flex-start', marginTop: 8, marginBottom: 40, fontWeight: '500' },
+
+    // Profile Step Styles
+    profileSection: { width: '100%', alignItems: 'center' },
+    avatarPicker: { width: 120, height: 120, borderRadius: 44, backgroundColor: '#F8F9FB', marginBottom: 32, overflow: 'hidden' },
+    avatarPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    avatarImg: { width: '100%', height: '100%' },
+    inputCard: { width: '100%', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24 },
+    inputLabel: { fontSize: 11, fontWeight: '800', color: '#C7C7CC', letterSpacing: 1, marginBottom: 12 },
+    input: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
+
+    marketList: { width: '100%', maxHeight: 350 },
     marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24, marginBottom: 16 },
     marketLogo: { width: 80, height: 24 },
     marketInfo: { flex: 1, marginLeft: 16 },

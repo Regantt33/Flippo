@@ -71,7 +71,7 @@ export default function ProfileScreen() {
     const handlePickAvatar = async () => {
         if (!editing) return;
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') return Alert.alert("Permesso Negato", "Flippo ha bisogno dell'accesso alle foto.");
+        if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
                             </View>
                         ) : (
                             <View>
-                                <Text style={styles.userName}>{profile.name || 'Utente Flippo'}</Text>
+                                <Text style={styles.userName}>{profile.name || 'Utente Selly'}</Text>
                                 <Text style={styles.userEmail}>{profile.email || 'Nessuna email collegata'}</Text>
                             </View>
                         )}
@@ -200,7 +200,7 @@ export default function ProfileScreen() {
                     </PremiumButton>
                 </View>
 
-                <Text style={styles.footerText}>Flippo v1.0.5 Premium Redesign</Text>
+                <Text style={styles.footerText}>Selly v1.0.5 Premium Redesign</Text>
                 <View style={{ height: 100 }} />
             </ScrollView>
         </View>

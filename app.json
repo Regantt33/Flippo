@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Flippo",
-    "slug": "Flippo",
+    "name": "Selly",
+    "slug": "selly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "flippo",
+    "scheme": "com.admin.selly",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {

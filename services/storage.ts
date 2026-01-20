@@ -55,12 +55,12 @@ export type InventoryItem = {
     createdAt: number;
 };
 
-const STORAGE_KEY = '@flippo_inventory';
+const INVENTORY_KEY = '@selly_inventory';
 
 export const StorageService = {
     getItems: async (): Promise<InventoryItem[]> => {
         try {
-            const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
+            const jsonValue = await AsyncStorage.getItem(INVENTORY_KEY);
             return jsonValue != null ? JSON.parse(jsonValue) : [];
         } catch (e) {
             console.error(e);
@@ -77,7 +77,7 @@ export const StorageService = {
                 createdAt: Date.now(),
             };
             const updatedItems = [newItem, ...currentItems];
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+            await AsyncStorage.setItem(INVENTORY_KEY, JSON.stringify(updatedItems));
             return newItem;
         } catch (e) {
             console.error(e);
@@ -89,7 +89,7 @@ export const StorageService = {
         try {
             const currentItems = await StorageService.getItems();
             const updatedItems = currentItems.filter(i => i.id !== id);
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+            await AsyncStorage.setItem(INVENTORY_KEY, JSON.stringify(updatedItems));
         } catch (e) {
             console.error(e);
         }
@@ -101,7 +101,7 @@ export const StorageService = {
             const updatedItems = currentItems.map(item =>
                 item.id === id ? { ...item, ...updates } : item
             );
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+            await AsyncStorage.setItem(INVENTORY_KEY, JSON.stringify(updatedItems));
             return updatedItems.find(i => i.id === id);
         } catch (e) {
             console.error(e);

@@ -13,6 +13,7 @@ export interface MarketplaceConfig {
     icon: string; // FontAwesome name
     color: string;
     url: string;
+    listingUrl: string;
 }
 
 export interface UserProfile {
@@ -22,15 +23,15 @@ export interface UserProfile {
     avatar?: string;
 }
 
-const SETTINGS_KEY = '@flippo_settings';
-const PROFILE_KEY = '@flippo_profile';
+const SETTINGS_KEY = '@selly_settings';
+const PROFILE_KEY = '@selly_profile';
 
 const DEFAULT_MARKETPLACES: MarketplaceConfig[] = [
-    { id: 'vinted', name: 'Vinted', isEnabled: true, isLoggedIn: false, icon: 'shopping-bag', color: '#34C759', url: 'https://vinted.it' },
-    { id: 'ebay', name: 'eBay', isEnabled: true, isLoggedIn: false, icon: 'gavel', color: '#FF9500', url: 'https://ebay.it' },
-    { id: 'subito', name: 'Subito', isEnabled: true, isLoggedIn: false, icon: 'bell', color: '#FF3B30', url: 'https://subito.it' },
-    { id: 'wallapop', name: 'Wallapop', isEnabled: false, isLoggedIn: false, icon: 'star', color: '#00D1B2', url: 'https://wallapop.com' },
-    { id: 'depop', name: 'Depop', isEnabled: false, isLoggedIn: false, icon: 'heart', color: '#FF2D55', url: 'https://depop.com' },
+    { id: 'vinted', name: 'Vinted', isEnabled: true, isLoggedIn: false, icon: 'shopping-bag', color: '#34C759', url: 'https://vinted.it', listingUrl: 'https://www.vinted.it/items/new' },
+    { id: 'ebay', name: 'eBay', isEnabled: true, isLoggedIn: false, icon: 'gavel', color: '#FF9500', url: 'https://ebay.it', listingUrl: 'https://www.ebay.it/sl/sell' },
+    { id: 'subito', name: 'Subito', isEnabled: true, isLoggedIn: false, icon: 'bell', color: '#FF3B30', url: 'https://subito.it', listingUrl: 'https://www.subito.it/inserisci.htm' },
+    { id: 'wallapop', name: 'Wallapop', isEnabled: false, isLoggedIn: false, icon: 'star', color: '#00D1B2', url: 'https://wallapop.com', listingUrl: 'https://es.wallapop.com/item/new' },
+    { id: 'depop', name: 'Depop', isEnabled: false, isLoggedIn: false, icon: 'heart', color: '#FF2D55', url: 'https://depop.com', listingUrl: 'https://www.depop.com/products/create/' },
 ];
 
 export const SettingsService = {

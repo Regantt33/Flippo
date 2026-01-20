@@ -148,7 +148,7 @@ export default function NewItemScreen() {
 
     const handleAddPhoto = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') return Alert.alert("Permesso Negato", "Flippo ha bisogno dell'accesso alle foto.");
+        if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
 
         let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.8 });
         if (!result.canceled) setImages([...images, result.assets[0].uri]);

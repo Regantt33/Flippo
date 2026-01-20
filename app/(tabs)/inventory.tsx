@@ -141,8 +141,8 @@ export default function InventoryScreen() {
             <View style={styles.emptyIcon}>
               <FontAwesome name="cube" size={40} color="#F2F2F7" />
             </View>
-            <Text style={styles.emptyTitle}>Inizia ora</Text>
-            <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto e Flippo ti aiuterà a venderlo ovunque.</Text>
+            <Text style={styles.emptyTitle}>Inventario Vuoto</Text>
+            <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto su Selly per iniziare a vendere.</Text>
             <PremiumButton style={styles.emptyBtn} onPress={() => router.push('/new-item')}>
               <Text style={styles.emptyBtnText}>Aggiungi Prodotto</Text>
             </PremiumButton>

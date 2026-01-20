@@ -150,14 +150,22 @@ export const SCRIPTS = {
             // Subito: Category tree
             if (window.location.host.includes('subito')) {
                 try {
-                    const catBtn = document.querySelector('[name="category"], .category-selector, #category-input');
-                    if (catBtn) {
-                        catBtn.click();
-                        await sleep(600);
-                        const items = Array.from(document.querySelectorAll('li, span, button')).filter(el => el.innerText.toLowerCase().includes(category.toLowerCase()));
-                        if (items.length > 0) items[0].click();
+                    // Category Selection on Subito can be a large list or a series of cards
+                    const catItems = Array.from(document.querySelectorAll('.category-item, [class*="CategoryItem"], .tag, li, button'));
+                    const bestCat = catItems.find(el => el.innerText.toLowerCase().includes(category.toLowerCase()));
+                    if (bestCat) {
+                        bestCat.click();
+                        await sleep(800);
+                        // Sometimes there is a 'Confirm' or 'Next' button after category
+                        const nextBtn = document.querySelector('button[type="submit"], .next-button, [class*="Button-primary"]');
+                        if (nextBtn && nextBtn.innerText.toLowerCase().includes('continua')) nextBtn.click();
                     }
-                } catch (e) {}
+
+                    // Field Selectors for Subito Listing Page
+                    await fillField(['title', 'subject', 'nome oggetto'], ${JSON.stringify(item.title)});
+                    await fillField(['description', 'testo dell', 'corpo'], ${JSON.stringify(item.description)}, 'textarea');
+                    await fillField(['price', 'prezzo'], scrubPrice(${JSON.stringify(item.price)}));
+                } catch (e) { console.log('Subito error', e); }
             }
         }
 
@@ -235,10 +243,20 @@ export const SCRIPTS = {
                 if (target) {
                     const files = await Promise.all(images.map(async (b64, i) => {
                         try {
-                            const res = await fetch(b64);
-                            const blob = await res.blob();
-                            return new File([blob], 'image_' + i + '.jpg', { type: 'image/jpeg' });
-                        } catch (e) { return null; }
+                            const parts = b64.split(';base64,');
+                            const contentType = parts[0].split(':')[1];
+                            const raw = window.atob(parts[1]);
+                            const rawLength = raw.length;
+                            const uInt8Array = new Uint8Array(rawLength);
+                            for (let j = 0; j < rawLength; ++j) {
+                                uInt8Array[j] = raw.charCodeAt(j);
+                            }
+                            const blob = new Blob([uInt8Array], { type: contentType });
+                            return new File([blob], 'image_' + i + '.jpg', { type: contentType });
+                        } catch (e) { 
+                            console.error('Image processing error', e);
+                            return null; 
+                        }
                     }));
 
                     const validFiles = files.filter(f => f !== null);
@@ -269,7 +287,9 @@ export const SCRIPTS = {
         await fillAllText();
 
         const msg = '✅ Auto-Fill Persistent Completed';
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
+        if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
+        }
         alert(msg);
       } catch (globalError) {
         console.error('Global injection error:', globalError);

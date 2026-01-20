@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-const API_KEY_STORAGE = "@flippo_gemini_key";
+const API_KEY_STORAGE = "@selly_gemini_key";
 
 // Default prompt engineering
 const SYSTEM_PROMPT = `

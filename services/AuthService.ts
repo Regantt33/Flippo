@@ -5,6 +5,7 @@ export interface MarketplaceConfig {
     id: string;
     name: string;
     loginUrl: string;
+    listingUrl: string;
     color: string;
 }
 
@@ -13,35 +14,41 @@ export const MARKETPLACES: MarketplaceConfig[] = [
         id: 'vinted',
         name: 'Vinted',
         loginUrl: 'https://www.vinted.it/',
+        listingUrl: 'https://www.vinted.it/items/new',
         color: '#09B1BA',
     },
     {
         id: 'ebay',
         name: 'eBay',
         loginUrl: 'https://www.ebay.it/',
+        listingUrl: 'https://www.ebay.it/sl/sell',
         color: '#E53238',
     },
     {
         id: 'subito',
         name: 'Subito',
         loginUrl: 'https://www.subito.it/',
+        listingUrl: 'https://www.subito.it/inserisci.htm',
         color: '#FF5F5F',
     },
     {
         id: 'depop',
         name: 'Depop',
         loginUrl: 'https://www.depop.com/',
+        listingUrl: 'https://www.depop.com/products/create/',
         color: '#000000',
     },
     {
         id: 'wallapop',
         name: 'Wallapop',
         loginUrl: 'https://es.wallapop.com/',
+        listingUrl: 'https://es.wallapop.com/item/new',
         color: '#13C1AC',
     },
 ];
 
-const STORAGE_KEY = 'marketplace_connections';
+const STORAGE_KEY = '@selly_marketplace_connections';
+const PENDING_LOGIN_KEY = '@selly_pending_login';
 
 export class AuthService {
     /**
@@ -57,7 +64,7 @@ export class AuthService {
      */
     static async setPendingLogin(marketplaceId: string): Promise<void> {
         try {
-            await AsyncStorage.setItem('pending_login', marketplaceId);
+            await AsyncStorage.setItem(PENDING_LOGIN_KEY, marketplaceId);
         } catch (error) {
             console.error('Error setting pending login:', error);
         }
@@ -68,7 +75,7 @@ export class AuthService {
      */
     static async getPendingLogin(): Promise<string | null> {
         try {
-            return await AsyncStorage.getItem('pending_login');
+            return await AsyncStorage.getItem(PENDING_LOGIN_KEY);
         } catch {
             return null;
         }
@@ -79,7 +86,7 @@ export class AuthService {
      */
     static async clearPendingLogin(): Promise<void> {
         try {
-            await AsyncStorage.removeItem('pending_login');
+            await AsyncStorage.removeItem(PENDING_LOGIN_KEY);
         } catch (error) {
             console.error('Error clearing pending login:', error);
         }
