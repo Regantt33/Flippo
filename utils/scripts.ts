@@ -4,8 +4,8 @@
  */
 
 export const SCRIPTS = {
-  // Scrapes notification badge count from a generic site structure
-  SCRAPE_NOTIFICATIONS: `
+    // Scrapes notification badge count from a generic site structure
+    SCRAPE_NOTIFICATIONS: `
     (function() {
       // Simulation: Try to find common badge elements
       const badge = document.querySelector('.badge-count, .notification-bubble, [aria-label*="notif"]');
@@ -14,8 +14,8 @@ export const SCRIPTS = {
     })();
   `,
 
-  // Fills a generic form with Item Data and Images
-  AUTO_COMPILE: (item: { title: string; price: string; description: string; images?: string[] }) => `
+    // Fills a generic form with Item Data and Images
+    AUTO_COMPILE: (item: { title: string; price: string; description: string; images?: string[] }) => `
     (async function() {
       try {
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -52,99 +52,100 @@ export const SCRIPTS = {
 
         async function fill(el, value) {
             if (!el) return;
+            
+            // Focus and click to trigger any activation handlers
             el.focus();
+            el.click();
             await sleep(50);
-            el.value = value;
+
+            // Set value using property descriptor to bypass some React internal interceptions
+            try {
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                    el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
+                    'value'
+                ).set;
+                nativeInputValueSetter.call(el, value);
+            } catch (e) {
+                el.value = value;
+            }
+
+            // Dispatch events to notify the framework (React/Vue/etc)
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Extra events for some libraries
+            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            
             await sleep(50);
             el.blur();
         }
 
-        console.log('Starting Flippo Auto-Fill...');
+        async function fillAllText() {
+            console.log('Filling text fields...');
+            
+            // 1. Find Title
+            try {
+                const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];
+                const titleInput = findBestInput(titleKw, 'input');
+                if (titleInput) await fill(titleInput, ${JSON.stringify(item.title)});
+            } catch (e) {}
 
-        // 1. Find Title
-        try {
-            const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];
-            const titleInput = findBestInput(titleKw, 'input');
-            if (titleInput) {
-                await fill(titleInput, ${JSON.stringify(item.title)});
-                console.log('Title filled');
-            }
-        } catch (e) { console.error('Title fill failed', e); }
+            await sleep(100);
 
-        await sleep(200);
+            // 2. Find Price
+            try {
+                const priceKeywords = ['price', 'prezzo', 'euro', 'amount', 'cifra'];
+                const priceInput = findBestInput(priceKeywords, 'input');
+                if (priceInput) await fill(priceInput, ${JSON.stringify(item.price)});
+            } catch (e) {}
 
-        // 2. Find Price
-        try {
-            const priceKeywords = ['price', 'prezzo', 'euro', 'amount', 'cifra'];
-            const priceInput = findBestInput(priceKeywords, 'input');
-            if (priceInput) {
-                await fill(priceInput, ${JSON.stringify(item.price)});
-                console.log('Price filled');
-            }
-        } catch (e) { console.error('Price fill failed', e); }
+            await sleep(100);
 
-        await sleep(200);
+            // 3. Find Description
+            try {
+                const descKw = ['desc', 'body', 'testo', 'info', 'text', 'storia'];
+                const descInput = findBestInput(descKw, 'textarea'); 
+                if (descInput) await fill(descInput, ${JSON.stringify(item.description)});
+            } catch (e) {}
+        }
 
-        // 3. Find Description
-        try {
-            const descKw = ['desc', 'body', 'testo', 'info', 'text', 'storia'];
-            const descInput = findBestInput(descKw, 'textarea'); 
-            if (descInput) {
-                await fill(descInput, ${JSON.stringify(item.description)});
-                console.log('Description filled');
-            }
-        } catch (e) { console.error('Description fill failed', e); }
+        console.log('Starting Flippo Persistent Auto-Fill...');
+
+        // FIRST PASS: Fill text immediately
+        await fillAllText();
 
         await sleep(500);
 
-        // 4. Image Injection (Experimental Drag & Drop Simulation)
+        // IMAGE PASS: Inject images
         const images = ${JSON.stringify(item.images || [])};
         if (images && images.length > 0) {
             try {
-                // Find drop zones
                 const dropZoneSelectors = [
-                    '.drag-drop__input', // Vinted
-                    'input[type="file"]', // Generic
-                    '.upload-zone', 
-                    '.uploader',
-                    '.image-upload-container',
-                    '[aria-label*="upload"]',
-                    '[aria-label*="carica"]',
-                    '#photos-upload',
-                    '[data-testid="file-input"]'
+                    '.drag-drop__input', 'input[type="file"]', '.upload-zone', 
+                    '.uploader', '.image-upload-container', '[aria-label*="upload"]',
+                    '[aria-label*="carica"]', '#photos-upload', '[data-testid="file-input"]'
                 ];
                 
                 let target = null;
                 for (const sel of dropZoneSelectors) {
                     target = document.querySelector(sel);
-                    if (target) {
-                        console.log('Found drop zone:', sel);
-                        break;
-                    }
+                    if (target) break;
                 }
 
                 if (target) {
-                    // Convert Base64 to Blobs/Files
                     const files = await Promise.all(images.map(async (b64, i) => {
                         try {
                             const res = await fetch(b64);
                             const blob = await res.blob();
                             return new File([blob], 'image_' + i + '.jpg', { type: 'image/jpeg' });
-                        } catch (e) {
-                            console.error('Blob conversion failed', i, e);
-                            return null;
-                        }
+                        } catch (e) { return null; }
                     }));
 
                     const validFiles = files.filter(f => f !== null);
-
-                    // Create DataTransfer
                     const dataTransfer = new DataTransfer();
                     validFiles.forEach(file => dataTransfer.items.add(file));
 
-                    // Trigger drop event
                     const dropEvent = new DragEvent('drop', {
                         bubbles: true,
                         cancelable: true,
@@ -152,24 +153,23 @@ export const SCRIPTS = {
                     });
                     
                     if (target.tagName === 'INPUT' && target.type === 'file') {
-                        Object.defineProperty(target, 'files', {
-                            value: dataTransfer.files,
-                            writable: false
-                        });
+                        Object.defineProperty(target, 'files', { value: dataTransfer.files, writable: false });
                         target.dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
                         target.dispatchEvent(dropEvent);
                     }
-                    console.log('Images injected successfully');
-                } else {
-                    console.warn('No drop zone found for images');
+                    console.log('Images injected');
                 }
-            } catch (e) {
-                console.error('Image injection internal error:', e);
-            }
+            } catch (e) { console.error('Image injection error', e); }
         }
 
-        const msg = '✅ Auto-Fill Process Completed';
+        // WAIT AND RE-FILL: Some SPAs reset forms when images are added
+        // We wait for the potential state reset to happen, then fill again.
+        await sleep(2000); 
+        console.log('Second pass to persist text...');
+        await fillAllText();
+
+        const msg = '✅ Auto-Fill Persistent Completed';
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
         alert(msg);
       } catch (globalError) {
@@ -179,8 +179,8 @@ export const SCRIPTS = {
     })();
   `,
 
-  // Anti-Bot: Advanced Hardening for Vinted/Cloudflare
-  ANTI_BOT_SCRIPT: `
+    // Anti-Bot: Advanced Hardening for Vinted/Cloudflare
+    ANTI_BOT_SCRIPT: `
     (function() {
       try {
         // 1. Mask WebDriver & Automation properties
