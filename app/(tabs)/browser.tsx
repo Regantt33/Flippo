@@ -1,409 +1,239 @@
+import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { Colors } from '@/constants/Colors';
-import { AuthService } from '@/services/AuthService';
-import { SettingsService } from '@/services/settings';
-import { InventoryItem, StorageService } from '@/services/storage';
-import { SCRIPTS } from '@/utils/scripts';
+import { MarketplaceConfig, SettingsService } from '@/services/settings';
+import { StorageService } from '@/services/storage';
+import { AUTO_COMPILE } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import * as FileSystem from 'expo-file-system/legacy';
-import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import WebView from 'react-native-webview';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const PremiumButton = ({ onPress, children, style, disabled }: any) => {
+    const scale = useRef(new Animated.Value(1)).current;
+    const handlePressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
+    const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+    return (
+        <AnimatedPressable
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={[style, { transform: [{ scale }] }]}
+            disabled={disabled}
+        >
+            {children}
+        </AnimatedPressable>
+    );
+};
 
 export default function BrowserScreen() {
     const params = useLocalSearchParams();
     const router = useRouter();
-    const navigation = useNavigation();
     const webViewRef = useRef<WebView>(null);
 
-    // State for Dynamic Hub
-    const [currentTab, setCurrentTab] = useState<string | null>(null);
-    const [availableMarketplaces, setAvailableMarketplaces] = useState<any[]>([]);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [currentUrl, setCurrentUrl] = useState<string>('');
+    // State
+    const [url, setUrl] = useState<string>('');
+    const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
+    const [currentSite, setCurrentSite] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [canGoBack, setCanGoBack] = useState(false);
 
-    // State for Login Mode
-    const [isLoginMode, setIsLoginMode] = useState(false);
-    const [loginSource, setLoginSource] = useState<'onboarding' | 'profile' | 'publish' | null>(null);
-    const [pendingMarketplace, setPendingMarketplace] = useState<string | null>(null);
-    const [loginDetected, setLoginDetected] = useState(false);
+    // Automation State
+    const [isCompiling, setIsCompiling] = useState(false);
+    const [compileProgress, setCompileProgress] = useState(0);
 
-    // State for Auto-Fill
-    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-    const [showItemPicker, setShowItemPicker] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    // Default URLs for marketplaces
-    const urls = {
-        vinted: { home: 'https://www.vinted.it', sell: 'https://www.vinted.it/items/new' },
-        ebay: { home: 'https://www.ebay.it', sell: 'https://www.ebay.it/sl/prelist/suggest' },
-        subito: { home: 'https://www.subito.it', sell: 'https://www.subito.it/pubblica-annuncio/' }
-    };
-
-    // 1. Initial Load: Filter Marketplaces
-    useFocusEffect(
-        useCallback(() => {
-            loadMarketplaces();
-        }, [])
-    );
+    useFocusEffect(useCallback(() => {
+        loadMarketplaces();
+        if (params.url) {
+            setUrl(params.url as string);
+            extractSiteFromUrl(params.url as string);
+        }
+        if (params.platform) {
+            const m = SettingsService.DEFAULT_MARKETPLACES.find(x => x.id === params.platform);
+            if (m) {
+                setUrl(m.url);
+                setCurrentSite(m.id);
+            }
+        }
+    }, [params.url, params.platform]));
 
     const loadMarketplaces = async () => {
-        try {
-            const [all, connected] = await Promise.all([
-                SettingsService.getMarketplaces(),
-                AuthService.getConnections()
-            ]);
+        const m = await SettingsService.getMarketplaces();
+        setMarketplaces(m.filter(x => x.isEnabled));
+    };
 
-            const filtered = all.filter(m => m.isEnabled && connected.includes(m.id));
-            setAvailableMarketplaces(filtered);
+    const extractSiteFromUrl = (url: string) => {
+        if (url.includes('vinted')) setCurrentSite('vinted');
+        else if (url.includes('ebay')) setCurrentSite('ebay');
+        else if (url.includes('subito')) setCurrentSite('subito');
+        else setCurrentSite(null);
+    };
 
-            if (filtered.length > 0 && isInitialLoad) {
-                const first = filtered[0];
-                setCurrentTab(first.id);
-                const targetUrl = first.id === 'vinted' ? urls.vinted.sell :
-                    first.id === 'ebay' ? urls.ebay.sell :
-                        first.id === 'subito' ? urls.subito.sell :
-                            first.url;
-                setCurrentUrl(targetUrl);
-                setIsInitialLoad(false);
-            }
-        } catch (err) {
-            console.error("Error loading marketplaces in Hub:", err);
+    const handleMarketSelection = (m: MarketplaceConfig) => {
+        setUrl(m.url);
+        setCurrentSite(m.id);
+    };
+
+    const injectAutoCompile = async () => {
+        if (!params.itemId) return;
+        setIsCompiling(true);
+        setCompileProgress(0.1);
+
+        const items = await StorageService.getItems();
+        const item = items.find(i => i.id === params.itemId);
+
+        if (item && webViewRef.current) {
+            setCompileProgress(0.5);
+            const script = AUTO_COMPILE(item);
+            webViewRef.current.injectJavaScript(script);
+
+            setTimeout(() => {
+                setCompileProgress(1);
+                setTimeout(() => setIsCompiling(false), 500);
+            }, 2000);
         }
     };
 
-    // 2. Navigation & Params Handling
+    // Auto-trigger compile if mode is active
     useEffect(() => {
-        if (params.login === 'true' && params.url) {
-            setIsLoginMode(true);
-            setLoginSource((params.source as any) || 'onboarding');
-            setCurrentUrl(decodeURIComponent(params.url as string));
-        } else if (params.platform && params.autoFillMode === 'true') {
-            const platform = params.platform as keyof typeof urls;
-            if (urls[platform]) {
-                setCurrentTab(platform);
-                setCurrentUrl(urls[platform].sell);
-            }
+        if (params.autoFillMode === 'true' && url && !isLoading) {
+            setTimeout(injectAutoCompile, 2000);
         }
-        checkPendingLogin();
-    }, [params]);
+    }, [url, isLoading]);
 
-    const checkPendingLogin = async () => {
-        const pending = await AuthService.getPendingLogin();
-        if (pending) {
-            setPendingMarketplace(pending);
-            setIsLoginMode(true);
-        }
-    };
+    if (!url) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.hubHeader}>
+                    <Text style={styles.hubTitle}>Hub Automazioni</Text>
+                    <Text style={styles.hubSubtitle}>Seleziona un marketplace per iniziare</Text>
+                </View>
 
-    // Hide tab bar in login mode
-    useEffect(() => {
-        navigation.setOptions({
-            tabBarStyle: { display: isLoginMode ? 'none' : 'flex' }
-        });
-    }, [isLoginMode, navigation]);
-
-    // 3. WebView Interactions
-    const handleMessage = (event: any) => {
-        try {
-            const data = JSON.parse(event.nativeEvent.data);
-            if (data.type === 'LOG') console.log("WebView Log:", data.message);
-        } catch (e) { }
-    };
-
-    const injectAutoCompile = async (selectedItem?: InventoryItem) => {
-        let item: any = null;
-
-        if (selectedItem) {
-            item = selectedItem;
-        } else if (params.itemId) {
-            const stored = await StorageService.getItems();
-            const found = stored.find(i => i.id === params.itemId);
-            if (found) item = found;
-        }
-
-        if (!item) {
-            const items = await StorageService.getItems();
-            setInventoryItems(items);
-            setShowItemPicker(true);
-            return;
-        }
-
-        setIsProcessing(true);
-        setShowItemPicker(false);
-
-        // Wait for modal to close fully to avoid UI bridge congestion/crashes
-        setTimeout(async () => {
-            try {
-                const base64Images = [];
-                if (item.images && item.images.length > 0) {
-                    for (const imgUri of item.images) {
-                        try {
-                            const base64 = await FileSystem.readAsStringAsync(imgUri, {
-                                encoding: 'base64',
-                            });
-                            base64Images.push(`data:image/jpeg;base64,${base64}`);
-                        } catch (err) {
-                            console.error('Error reading image:', imgUri, err);
-                        }
-                    }
-                }
-
-                const compileData = {
-                    title: item.title,
-                    price: item.price,
-                    description: item.description,
-                    category: item.category,
-                    images: base64Images.slice(0, 5)
-                };
-
-                webViewRef.current?.injectJavaScript(SCRIPTS.AUTO_COMPILE(compileData));
-            } catch (error) {
-                console.error('Auto-compile error:', error);
-                Alert.alert('Error', 'Failed to prepare data for auto-fill.');
-            } finally {
-                setIsProcessing(false);
-            }
-        }, 300);
-    };
-
-    // 4. Login Detection Logic
-    const detectLoginComplete = (url: string): boolean => {
-        if (!pendingMarketplace) return false;
-        const lowerUrl = url.toLowerCase();
-
-        if (pendingMarketplace === 'vinted') {
-            const successPages = ['/catalog', '/member/settings', '/items/', '/inbox', '/my/items'];
-            return lowerUrl.includes('vinted.it') && successPages.some(pp => lowerUrl.includes(pp)) && !lowerUrl.includes('/login');
-        }
-        if (pendingMarketplace === 'ebay') {
-            const successPages = ['/myb/', '/mye/', '/sh/'];
-            return lowerUrl.includes('ebay.it') && (successPages.some(pp => lowerUrl.includes(pp)) || (!lowerUrl.includes('/signin') && !lowerUrl.includes('/ws/ebayisapi')));
-        }
-        if (pendingMarketplace === 'subito') {
-            const successIndicators = ['/mysubito', '/account', '/inserisci'];
-            return lowerUrl.includes('subito.it') && (successIndicators.some(pp => lowerUrl.includes(pp)) || !lowerUrl.includes('/login'));
-        }
-        return false;
-    };
-
-    const handleLoginSuccess = async () => {
-        if (!pendingMarketplace) return;
-        await AuthService.markAsConnected(pendingMarketplace);
-        await AuthService.clearPendingLogin();
-
-        const marketplace = AuthService.getMarketplace(pendingMarketplace);
-        const returnButton = loginSource === 'onboarding' ? 'Back to Setup' : loginSource === 'profile' ? 'Back to Profile' : 'Continue';
-
-        Alert.alert('✅ Login Completed!', `You're now logged into ${marketplace?.name || pendingMarketplace}.`, [
-            {
-                text: returnButton,
-                onPress: () => {
-                    if (loginSource === 'onboarding') router.replace('/onboarding?step=2');
-                    else if (loginSource === 'profile') router.push('/(tabs)/profile');
-                    else router.back();
-                }
-            }
-        ]);
-
-        setIsLoginMode(false);
-        setPendingMarketplace(null);
-    };
-
-    const handleManualConfirm = () => {
-        Alert.alert('Confirm Login', 'Have you successfully logged in?', [
-            { text: 'Not Yet', style: 'cancel' },
-            { text: 'Yes, I\'m Logged In', onPress: handleLoginSuccess }
-        ]);
-    };
-
-    const handleNavigationStateChange = (navState: any) => {
-        if (isLoginMode && detectLoginComplete(navState.url)) {
-            handleLoginSuccess();
-        }
-    };
+                <ScrollView contentContainerStyle={styles.hubGrid}>
+                    {marketplaces.length === 0 ? (
+                        <View style={styles.emptyHub}>
+                            <FontAwesome name="plug" size={40} color="#F2F2F7" />
+                            <Text style={styles.emptyText}>Nessun marketplace attivo.</Text>
+                            <PremiumButton style={styles.settingsBtn} onPress={() => router.push('/(tabs)/profile')}>
+                                <Text style={styles.settingsBtnText}>Configura Marketplace</Text>
+                            </PremiumButton>
+                        </View>
+                    ) : (
+                        marketplaces.map(m => (
+                            <PremiumButton
+                                key={m.id}
+                                style={styles.marketCard}
+                                onPress={() => handleMarketSelection(m)}
+                            >
+                                <MarketplaceLogo id={m.id} style={styles.marketLogo} />
+                                <View style={styles.marketInfo}>
+                                    <Text style={styles.marketName}>{m.name}</Text>
+                                    <View style={styles.marketBadge}>
+                                        <Text style={styles.marketBadgeText}>ONLINE</Text>
+                                    </View>
+                                </View>
+                                <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
+                            </PremiumButton>
+                        ))
+                    )}
+                </ScrollView>
+            </View>
+        );
+    }
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header / Tabs */}
-            <View style={styles.header}>
-                {availableMarketplaces.length > 0 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer}>
-                        {availableMarketplaces.map((m) => {
-                            const isActive = currentTab === m.id;
-                            const sellUrl = m.id === 'vinted' ? urls.vinted.sell :
-                                m.id === 'ebay' ? urls.ebay.sell :
-                                    m.id === 'subito' ? urls.subito.sell : m.url;
+        <View style={styles.container}>
+            {/* Minimal Browser Header */}
+            <View style={styles.browserHeader}>
+                <PremiumButton style={styles.navBtn} onPress={() => setUrl('')}>
+                    <FontAwesome name="th-large" size={18} color="#1C1C1E" />
+                </PremiumButton>
 
-                            return (
-                                <TouchableOpacity
-                                    key={m.id}
-                                    style={[styles.tab, isActive && styles.activeTab]}
-                                    onPress={() => {
-                                        setCurrentTab(m.id);
-                                        setCurrentUrl(sellUrl);
-                                    }}
-                                >
-                                    <FontAwesome name={m.icon} size={14} color={isActive ? m.color : '#8E8E93'} />
-                                    <Text style={[styles.tabText, isActive && styles.activeTabText]}>{m.name}</Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-                ) : (
-                    <View style={styles.emptyTabs}>
-                        <Text style={styles.emptyTabText}>No connected marketplaces.</Text>
-                        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-                            <Text style={styles.connectLink}>Go to Profile to connect</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                <View style={styles.urlBar}>
+                    {currentSite && <MarketplaceLogo id={currentSite} style={styles.smallLogo} />}
+                    <Text style={styles.urlText} numberOfLines={1}>{url.replace('https://', '')}</Text>
+                    {isLoading && <ActivityIndicator size="small" color={Colors.light.primary} />}
+                </View>
+
+                <View style={styles.browserActions}>
+                    <PremiumButton style={styles.navBtn} onPress={() => webViewRef.current?.reload()}>
+                        <FontAwesome name="refresh" size={16} color="#8E8E93" />
+                    </PremiumButton>
+                </View>
             </View>
 
-            {/* Main Content: WebView or Empty State */}
-            {availableMarketplaces.length > 0 || isLoginMode ? (
-                <WebView
-                    key={currentTab || 'login'}
-                    ref={webViewRef}
-                    source={{ uri: currentUrl }}
-                    style={{ flex: 1 }}
-                    userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
-                    onMessage={handleMessage}
-                    onNavigationStateChange={handleNavigationStateChange}
-                    injectedJavaScriptBeforeContentLoaded={SCRIPTS.ANTI_BOT_SCRIPT}
-                    injectedJavaScript={SCRIPTS.SCRAPE_NOTIFICATIONS}
-                    javaScriptEnabled={true}
-                    domStorageEnabled={true}
-                    sharedCookiesEnabled={true}
-                    thirdPartyCookiesEnabled={true}
-                    startInLoadingState
-                    renderLoading={() => (
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-                            <Text style={{ color: '#8E8E93' }}>Loading Market...</Text>
+            <WebView
+                ref={webViewRef}
+                source={{ uri: url }}
+                style={styles.webview}
+                onLoadStart={() => setIsLoading(true)}
+                onLoadEnd={() => setIsLoading(false)}
+                onNavigationStateChange={(navState) => {
+                    setCanGoBack(navState.canGoBack);
+                    extractSiteFromUrl(navState.url);
+                }}
+            />
+
+            {/* Automation Overlay */}
+            {isCompiling && (
+                <View style={styles.overlay}>
+                    <View style={styles.statusCard}>
+                        <ActivityIndicator color={Colors.light.primary} />
+                        <Text style={styles.statusText}>Compilazione Automatica...</Text>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: `${compileProgress * 100}%` }]} />
                         </View>
-                    )}
-                />
-            ) : (
-                <View style={styles.emptyState}>
-                    <FontAwesome name="plug" size={50} color="#C7C7CC" />
-                    <Text style={styles.emptyStateTitle}>Marketplace Not Connected</Text>
-                    <Text style={styles.emptyStateSub}>Connect your accounts in the Profile tab to enable the Smart Hub browser.</Text>
-                    <TouchableOpacity style={styles.profileBtn} onPress={() => router.push('/(tabs)/profile')}>
-                        <Text style={styles.profileBtnText}>Go to Profile</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Overlays */}
-            {isLoginMode && <View style={styles.loginOverlay} pointerEvents="none" />}
-
-            {isLoginMode && pendingMarketplace && (
-                <View style={styles.loginBanner}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.loginBannerTitle}>🔐 Login Mode</Text>
-                        <Text style={styles.loginBannerText}>
-                            Log in to {AuthService.getMarketplace(pendingMarketplace)?.name || pendingMarketplace}.
-                        </Text>
-                    </View>
-                    <TouchableOpacity style={styles.loginConfirmBtn} onPress={handleManualConfirm}>
-                        <FontAwesome name="check" size={18} color="#fff" />
-                        <Text style={styles.loginConfirmText}>Done</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {!isLoginMode && availableMarketplaces.length > 0 && (
-                <View style={styles.floatingBar}>
-                    <TouchableOpacity
-                        style={[styles.turbofillBtn, isProcessing && { opacity: 0.7 }]}
-                        onPress={() => injectAutoCompile()}
-                        disabled={isProcessing}
-                    >
-                        <FontAwesome name={isProcessing ? "spinner" : "magic"} size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.turbofillText}>{isProcessing ? "Filling..." : "Auto-Fill"}</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Item Picker Modal */}
-            <Modal visible={showItemPicker} animationType="slide" transparent onRequestClose={() => setShowItemPicker(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.pickerContainer}>
-                        <View style={styles.pickerHeader}>
-                            <Text style={styles.pickerTitle}>Select Item to List</Text>
-                            <TouchableOpacity onPress={() => setShowItemPicker(false)}>
-                                <FontAwesome name="times" size={20} color="#8E8E93" />
-                            </TouchableOpacity>
-                        </View>
-                        <FlatList
-                            data={inventoryItems}
-                            keyExtractor={(item) => item.id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity style={styles.itemCard} onPress={() => injectAutoCompile(item)}>
-                                    <View style={styles.itemThumbnailContainer}>
-                                        {item.images?.[0] ? <Image source={{ uri: item.images[0] }} style={styles.itemThumbnail} /> : <FontAwesome name="image" size={20} color="#C7C7CC" />}
-                                    </View>
-                                    <View style={styles.itemInfo}>
-                                        <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-                                        <Text style={styles.itemPrice}>€{item.price}</Text>
-                                    </View>
-                                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                                </TouchableOpacity>
-                            )}
-                            ListEmptyComponent={() => (
-                                <View style={styles.emptyContainer}>
-                                    <Text style={styles.emptyText}>No items found in inventory.</Text>
-                                    <TouchableOpacity style={styles.createBtn} onPress={() => { setShowItemPicker(false); router.push('/new-item'); }}>
-                                        <Text style={styles.createBtnText}>Create New Item</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                            contentContainerStyle={{ padding: 16 }}
-                        />
                     </View>
                 </View>
-            </Modal>
-        </SafeAreaView>
+            )}
+
+            {/* Floating Navigation */}
+            {canGoBack && (
+                <PremiumButton style={styles.backFab} onPress={() => webViewRef.current?.goBack()}>
+                    <FontAwesome name="chevron-left" size={16} color="#fff" />
+                </PremiumButton>
+            )}
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: { height: 50, backgroundColor: '#F2F2F7', borderBottomWidth: 1, borderBottomColor: '#E5E5EA' },
-    tabsContainer: { paddingHorizontal: 10, alignItems: 'center' },
-    tab: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginRight: 4 },
-    activeTab: { backgroundColor: '#fff', elevation: 2, shadowOpacity: 0.1 },
-    tabText: { color: '#8E8E93', fontWeight: '500', fontSize: 13 },
-    activeTabText: { color: '#000', fontWeight: '600' },
-    emptyTabs: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8 },
-    emptyTabText: { fontSize: 13, color: '#8E8E93' },
-    connectLink: { fontSize: 13, color: Colors.light.primary, fontWeight: '600' },
-    floatingBar: { position: 'absolute', bottom: 20, alignSelf: 'center' },
-    turbofillBtn: { flexDirection: 'row', backgroundColor: Colors.light.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 30, elevation: 5 },
-    turbofillText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-    loginOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 215, 0, 0.05)' },
-    loginBanner: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFF9E6', borderTopWidth: 3, borderTopColor: '#FFD700', padding: 18, flexDirection: 'row', alignItems: 'center', elevation: 8 },
-    loginBannerTitle: { fontSize: 16, fontWeight: '700' },
-    loginBannerText: { fontSize: 13, color: '#666' },
-    loginConfirmBtn: { backgroundColor: '#34C759', padding: 14, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    loginConfirmText: { color: '#fff', fontWeight: '700' },
-    emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-    emptyStateTitle: { fontSize: 20, fontWeight: '700', marginTop: 20 },
-    emptyStateSub: { fontSize: 15, color: '#8E8E93', textAlign: 'center', marginTop: 10 },
-    profileBtn: { marginTop: 30, backgroundColor: Colors.light.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 },
-    profileBtnText: { color: '#fff', fontWeight: '600' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    pickerContainer: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '70%' },
-    pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
-    pickerTitle: { fontSize: 18, fontWeight: '700' },
-    itemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAFAFA', padding: 12, borderRadius: 12, marginBottom: 12 },
-    itemThumbnailContainer: { width: 50, height: 50, borderRadius: 8, backgroundColor: '#E5E5EA', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-    itemThumbnail: { width: '100%', height: '100%' },
-    itemInfo: { flex: 1, marginLeft: 12 },
-    itemTitle: { fontSize: 15, fontWeight: '600' },
-    itemPrice: { fontSize: 13, color: Colors.light.success, marginTop: 2 },
-    emptyContainer: { alignItems: 'center', paddingVertical: 40 },
-    emptyText: { color: '#8E8E93', marginBottom: 16 },
-    createBtn: { backgroundColor: Colors.light.primary, padding: 10, borderRadius: 8 },
-    createBtnText: { color: '#fff', fontWeight: '600' },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+
+    // Hub Styles
+    hubHeader: { paddingHorizontal: 24, paddingTop: 60, marginBottom: 32 },
+    hubTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
+    hubSubtitle: { fontSize: 15, color: '#8E8E93', fontWeight: '500', marginTop: 4 },
+    hubGrid: { paddingHorizontal: 24, gap: 16, paddingBottom: 100 },
+    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24 },
+    marketLogo: { width: 90, height: 28 },
+    marketInfo: { flex: 1, marginLeft: 16 },
+    marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
+    marketBadge: { backgroundColor: '#34C75920', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 4 },
+    marketBadgeText: { fontSize: 9, fontWeight: '900', color: '#34C759' },
+    emptyHub: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
+    emptyText: { fontSize: 16, color: '#8E8E93', marginTop: 16, fontWeight: '600' },
+    settingsBtn: { marginTop: 24, backgroundColor: '#1C1C1E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16 },
+    settingsBtnText: { color: '#fff', fontWeight: '800' },
+
+    // Browser Styles
+    browserHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F2F2F7', backgroundColor: '#FFFFFF' },
+    navBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    urlBar: { flex: 1, height: 40, backgroundColor: '#F8F9FB', borderRadius: 12, marginHorizontal: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
+    smallLogo: { width: 60, height: 18, marginRight: 8 },
+    urlText: { flex: 1, fontSize: 13, color: '#8E8E93', fontWeight: '600' },
+    browserActions: { flexDirection: 'row', alignItems: 'center' },
+    webview: { flex: 1 },
+
+    // Overlay & HUD
+    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+    statusCard: { backgroundColor: '#FFFFFF', padding: 24, borderRadius: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 10 },
+    statusText: { fontSize: 16, fontWeight: '800', color: '#1C1C1E', marginTop: 16, marginBottom: 12 },
+    progressBar: { width: 200, height: 6, backgroundColor: '#F2F2F7', borderRadius: 3, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: Colors.light.primary },
+
+    backFab: { position: 'absolute', bottom: 32, left: 24, width: 48, height: 48, borderRadius: 24, backgroundColor: '#1C1C1E', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15, zIndex: 100 },
 });

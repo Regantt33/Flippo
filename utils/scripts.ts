@@ -15,7 +15,18 @@ export const SCRIPTS = {
   `,
 
     // Fills a generic form with Item Data and Images
-    AUTO_COMPILE: (item: { title: string; price: string; description: string; category?: string; images?: string[] }) => `
+    AUTO_COMPILE: (item: {
+        title: string;
+        price: string;
+        description: string;
+        category?: string;
+        brand?: string;
+        size?: string;
+        condition?: string;
+        color?: string;
+        material?: string;
+        images?: string[]
+    }) => `
     (async function() {
       try {
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +39,7 @@ export const SCRIPTS = {
 
             candidates.forEach(el => {
                 if (el.offsetParent === null) return; // Skip hidden
-                if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio') return;
+                if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio' || el.type === 'submit') return;
 
                 let score = 0;
                 const attr = (el.id + ' ' + el.name + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label')||'')).toLowerCase();
@@ -48,6 +59,12 @@ export const SCRIPTS = {
                 }
             });
             return bestMatch;
+        }
+
+        function scrubPrice(val) {
+            if (!val) return '';
+            // Remove Euro symbol or other currency if present to avoid doubling
+            return val.replace(/[^0-9.,]/g, '').trim();
         }
 
         async function fill(el, value) {
@@ -82,83 +99,114 @@ export const SCRIPTS = {
         }
 
         async function fillCategory(category) {
+            if (!category) return;
             console.log('Filling category:', category);
-            // Vinted: Select category
+            
+            // Vinted: Extreme Category Handling
             if (window.location.host.includes('vinted')) {
                 try {
-                    const selector = document.querySelector('[name="catalog_id"], .catalog-select, [aria-label*="categoria"], [aria-label*="category"]');
-                    if (selector) {
-                        selector.click();
-                        await sleep(500);
-                        // Try to find an input in the overlay
-                        const searchInput = document.querySelector('.dropdown-content input, .v-select__search');
+                    const selectors = ['[name="catalog_id"]', '.catalog-select', '[aria-label*="categoria"]', '.v-select__selection'];
+                    let btn = null;
+                    for (const s of selectors) {
+                        btn = document.querySelector(s);
+                        if (btn) break;
+                    }
+                    if (btn) {
+                        btn.click();
+                        await sleep(600);
+                        // Vinted often has search in the dropdown
+                        const searchInput = document.querySelector('input[placeholder*="cerca"], input[placeholder*="search"], .v-input__field');
                         if (searchInput) {
                             await fill(searchInput, category);
-                            await sleep(500);
-                            const firstResult = document.querySelector('.dropdown-content li, .v-select__option');
-                            if (firstResult) firstResult.click();
+                            await sleep(800);
+                            // Find best match in suggestions
+                            const suggestions = Array.from(document.querySelectorAll('li, .v-list-item, .v-select__option'));
+                            const best = suggestions.find(s => s.innerText.toLowerCase().includes(category.toLowerCase()));
+                            if (best) {
+                                best.click();
+                                await sleep(400);
+                                // Sometimes it's a 2-level menu
+                                const secondary = Array.from(document.querySelectorAll('li, .v-list-item')).find(s => s.innerText.toLowerCase().includes(category.toLowerCase()));
+                                if (secondary) secondary.click();
+                            }
                         }
                     }
-                } catch (e) {}
+                } catch (e) { console.log('Vinted category error', e); }
             }
-            // eBay: Category suggest
+            
+            // eBay: Category suggestion
             if (window.location.host.includes('ebay')) {
                 try {
-                    const searchBox = document.querySelector('#category-search-box, [aria-label*="category"]');
+                    const searchBox = document.querySelector('#category-search-box, [aria-label*="category"], input[name*="category"]');
                     if (searchBox) {
                         await fill(searchBox, category);
-                        await sleep(800);
-                        const suggest = document.querySelector('.category-suggestion, .suggest-item');
+                        await sleep(1000);
+                        const suggest = document.querySelector('.category-suggestion, .suggest-item, .category-search-results li');
                         if (suggest) suggest.click();
                     }
                 } catch (e) {}
             }
+
             // Subito: Category tree
             if (window.location.host.includes('subito')) {
                 try {
-                    const catBtn = document.querySelector('[name="category"], .category-selector');
+                    const catBtn = document.querySelector('[name="category"], .category-selector, #category-input');
                     if (catBtn) {
                         catBtn.click();
-                        await sleep(500);
-                        // Try to find text match in lists
-                        const items = Array.from(document.querySelectorAll('li, span')).filter(el => el.innerText.includes(category));
+                        await sleep(600);
+                        const items = Array.from(document.querySelectorAll('li, span, button')).filter(el => el.innerText.toLowerCase().includes(category.toLowerCase()));
                         if (items.length > 0) items[0].click();
                     }
                 } catch (e) {}
             }
         }
 
+        async function fillField(keywords, value, type = 'input') {
+            if (!value) return;
+            console.log('Filling field:', keywords[0], 'with', value);
+            const input = findBestInput(keywords, type);
+            if (input) await fill(input, value);
+        }
+
         async function fillAllText() {
             console.log('Filling text fields...');
             
-            // 0. Category
+            // 0. Category & Title (Critical)
             await fillCategory(${JSON.stringify(item.category)});
+            await sleep(300);
+            
+            await fillField(['title', 'titolo', 'subject', 'nome', 'name', 'what'], ${JSON.stringify(item.title)});
             await sleep(200);
 
-            // 1. Find Title
-            try {
-                const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];
-                const titleInput = findBestInput(titleKw, 'input');
-                if (titleInput) await fill(titleInput, ${JSON.stringify(item.title)});
-            } catch (e) {}
+            // 1. Price (Robust)
+            const cleanPrice = scrubPrice(${JSON.stringify(item.price)});
+            if (cleanPrice) {
+                console.log('Attempting to fill price:', cleanPrice);
+                await fillField(['price', 'prezzo', 'euro', 'amount', 'cifra', 'value', 'totale'], cleanPrice);
+                
+                // Backup Specific Selector for Vinted/eBay/Subito
+                const extraSelectors = [
+                    'input[name="price"]', 'input[id="price"]', 
+                    'input[aria-label*="Prezzo"]', 'input[aria-label*="Price"]', 
+                    'input[placeholder*="€"]', 'input[placeholder*="0,00"]',
+                    '[data-testid*="price"]', '.v-input__field--price'
+                ];
+                for (const sel of extraSelectors) {
+                    const el = document.querySelector(sel);
+                    if (el && !el.value) await fill(el, cleanPrice);
+                }
+            }
+            
+            // 2. Brand & Size
+            await fillField(['brand', 'marca', 'designer'], ${JSON.stringify(item.brand)});
+            await fillField(['size', 'taglia', 'misura', 'dimensione'], ${JSON.stringify(item.size)});
+            
+            // 3. Condition & Color
+            await fillField(['condition', 'stato', 'condizione'], ${JSON.stringify(item.condition)});
+            await fillField(['color', 'colore', 'tinta'], ${JSON.stringify(item.color)});
 
-            await sleep(100);
-
-            // 2. Find Price
-            try {
-                const priceKeywords = ['price', 'prezzo', 'euro', 'amount', 'cifra'];
-                const priceInput = findBestInput(priceKeywords, 'input');
-                if (priceInput) await fill(priceInput, ${JSON.stringify(item.price)});
-            } catch (e) {}
-
-            await sleep(100);
-
-            // 3. Find Description
-            try {
-                const descKw = ['desc', 'body', 'testo', 'info', 'text', 'storia'];
-                const descInput = findBestInput(descKw, 'textarea'); 
-                if (descInput) await fill(descInput, ${JSON.stringify(item.description)});
-            } catch (e) {}
+            // 4. Description (Last to avoid reset)
+            await fillField(['desc', 'body', 'testo', 'info', 'text'], ${JSON.stringify(item.description)}, 'textarea');
         }
 
         console.log('Starting Flippo Persistent Auto-Fill...');

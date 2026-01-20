@@ -1,42 +1,60 @@
-import { Text, View } from '@/components/Themed';
+import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { Colors } from '@/constants/Colors';
+import { AuthService } from '@/services/AuthService';
+import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-import { MarketplaceLogo } from '@/components/MarketplaceLogo';
-import { AuthService, MARKETPLACES } from '@/services/AuthService';
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const PremiumButton = ({ onPress, children, style }: any) => {
+    const scale = useRef(new Animated.Value(1)).current;
+    const handlePressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
+    const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+    return (
+        <AnimatedPressable
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={[style, { transform: [{ scale }] }]}
+        >
+            {children}
+        </AnimatedPressable>
+    );
+};
 
 export default function OnboardingScreen() {
     const params = useLocalSearchParams();
-    const initialStep = params.step ? parseInt(params.step as string, 10) : 1;
-    const [step, setStep] = useState(initialStep);
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-
-    // Animation Values
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(20)).current;
+    const [step, setStep] = useState(1);
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
 
     useEffect(() => {
-        // Reset and play animation on step change
-        fadeAnim.setValue(0);
-        slideAnim.setValue(20);
-        Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-            Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true })
-        ]).start();
-    }, [step]);
+        loadMarketplaces();
+        if (params.step) setStep(parseInt(params.step as string));
+    }, [params.step]);
 
-    const handleNext = () => {
-        if (step < 3) setStep(step + 1);
-        else router.replace('/loading'); // Finish onboarding
+    const loadMarketplaces = async () => {
+        const m = await SettingsService.getMarketplaces();
+        setMarketplaces(m || []);
     };
 
-    // Navigate to browser for login
+    const handleNext = () => {
+        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+            if (step < 3) {
+                setStep(step + 1);
+                Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+            } else {
+                router.replace('/(tabs)');
+            }
+        });
+    };
+
     const openLogin = async (marketplaceId: string) => {
         const url = AuthService.getLoginUrl(marketplaceId);
         if (url) {
@@ -47,301 +65,108 @@ export default function OnboardingScreen() {
 
     const StepIndicator = () => (
         <View style={styles.indicatorContainer}>
-            <View style={[styles.indicator, step === 1 && styles.indicatorActive]} />
-            <View style={[styles.indicator, step === 2 && styles.indicatorActive]} />
-            <View style={[styles.indicator, step === 3 && styles.indicatorActive]} />
+            {[1, 2, 3].map(i => (
+                <View key={i} style={[styles.indicator, step === i && styles.indicatorActive]} />
+            ))}
         </View>
     );
 
-    const renderStep1 = () => (
-        <Animated.View style={[styles.stepContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
-            <Text style={styles.title}>Welcome to Flippo</Text>
-            <Text style={styles.subtitle}>Your specialized assistant for unified reselling.</Text>
-
-            <View style={styles.inputWrapper}>
-                <Text style={styles.inputLabel}>WHAT SHOULD WE CALL YOU?</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter your name (e.g. Alex)"
-                    placeholderTextColor="#C7C7CC"
-                    value={name}
-                    onChangeText={setName}
-                    autoFocus={Platform.OS === 'web' ? false : true}
-                />
+    const WelcomeStep = () => (
+        <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+            <View style={styles.heroImageContainer}>
+                <View style={styles.blob} />
+                <FontAwesome name="rocket" size={80} color="#1C1C1E" />
             </View>
+            <Text style={styles.title}>Vendi Ovunque,{"\n"}Senza Sforzo.</Text>
+            <Text style={styles.subtitle}>Flippo automatizza le tue vendite sui principali marketplace di moda e tech.</Text>
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>Let's Start</Text>
-                <FontAwesome name="arrow-right" size={16} color="#fff" />
-            </TouchableOpacity>
+            <PremiumButton style={styles.mainBtn} onPress={handleNext}>
+                <Text style={styles.mainBtnText}>Inizia Ora</Text>
+            </PremiumButton>
         </Animated.View>
     );
 
-    const renderStep2 = () => (
-        <Animated.View style={[styles.stepContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Text style={styles.title}>Connect Marketplaces</Text>
-            <Text style={styles.subtitle}>Log in once to enable Smart Sync & Auto-Compile.</Text>
+    const ConnectStep = () => (
+        <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+            <Text style={styles.stepTitle}>Collega i tuoi store</Text>
+            <Text style={styles.stepSubtitle}>Accedi ai tuoi account per abilitare la sincronizzazione automatica.</Text>
 
-            <View style={styles.accountsList}>
-                {MARKETPLACES.map((marketplace) => (
-                    <TouchableOpacity
-                        key={marketplace.id}
-                        style={styles.accountCard}
-                        onPress={() => openLogin(marketplace.id)}
-                    >
-                        <MarketplaceLogo id={marketplace.id} style={styles.logoIcon} />
-                        <View style={styles.accountInfo}>
-                            <Text style={styles.accountName}>{marketplace.name}</Text>
-                            <Text style={styles.accountDesc}>
-                                {marketplace.id === 'vinted' && 'Syncs notifications & listings'}
-                                {marketplace.id === 'ebay' && 'Supports quick auto-fill'}
-                                {marketplace.id === 'subito' && 'Local sales management'}
-                                {marketplace.id === 'depop' && 'Fashion marketplace'}
-                                {marketplace.id === 'wallapop' && 'Buy & Sell Nearby'}
-                            </Text>
+            <ScrollView style={styles.marketList} showsVerticalScrollIndicator={false}>
+                {marketplaces.map((m) => (
+                    <PremiumButton key={m.id} style={styles.marketCard} onPress={() => openLogin(m.id)}>
+                        <MarketplaceLogo id={m.id} style={styles.marketLogo} />
+                        <View style={styles.marketInfo}>
+                            <Text style={styles.marketName}>{m.name}</Text>
+                            <Text style={styles.marketAction}>Tocca per accedere</Text>
                         </View>
-                        <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                    </TouchableOpacity>
+                        <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
+                    </PremiumButton>
                 ))}
-            </View>
+            </ScrollView>
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-            </TouchableOpacity>
+            <PremiumButton style={styles.mainBtn} onPress={handleNext}>
+                <Text style={styles.mainBtnText}>Continua</Text>
+            </PremiumButton>
         </Animated.View>
     );
 
-    const renderStep3 = () => (
-        <Animated.View style={[styles.stepContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <View style={styles.successIcon}>
+    const FinalStep = () => (
+        <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+            <View style={styles.successIconBox}>
                 <FontAwesome name="check" size={40} color="#fff" />
             </View>
-            <Text style={styles.title}>All Set, {name || 'Reseller'}!</Text>
-            <Text style={styles.subtitle}>Flippo will now run locally on your device.</Text>
+            <Text style={styles.title}>Sei Pronto!</Text>
+            <Text style={styles.subtitle}>Il tuo assistente personale alle vendite è configurato e pronto all'azione.</Text>
 
-            <View style={styles.infoCard}>
-                <View style={styles.infoRow}>
-                    <FontAwesome name="shield" size={18} color="#007AFF" />
-                    <Text style={styles.infoText}>Zero cloud data storage</Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.infoRow}>
-                    <FontAwesome name="bolt" size={18} color="#FFCC00" />
-                    <Text style={styles.infoText}>Background Sync Active</Text>
-                </View>
-            </View>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>Open Dashboard</Text>
-            </TouchableOpacity>
+            <PremiumButton style={styles.mainBtn} onPress={handleNext}>
+                <Text style={styles.mainBtnText}>Vai alla Dashboard</Text>
+            </PremiumButton>
         </Animated.View>
     );
 
     return (
         <View style={styles.container}>
-            <StepIndicator />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.contentContainer}
-            >
-                <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-                    {step === 1 && renderStep1()}
-                    {step === 2 && renderStep2()}
-                    {step === 3 && renderStep3()}
-                </ScrollView>
-            </KeyboardAvoidingView>
+            <View style={styles.header}>
+                <StepIndicator />
+            </View>
+
+            <View style={styles.content}>
+                {step === 1 && <WelcomeStep />}
+                {step === 2 && <ConnectStep />}
+                {step === 3 && <FinalStep />}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-    },
-    contentContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 25,
-    },
-    stepContent: {
-        alignItems: 'center',
-        width: '100%',
-    },
-    indicatorContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 8,
-        position: 'absolute',
-        top: 60,
-        width: '100%',
-        zIndex: 10,
-    },
-    indicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#E5E5EA',
-    },
-    indicatorActive: {
-        backgroundColor: '#000',
-        width: 20,
-    },
-    logo: {
-        width: 280, // Using same large logo
-        height: 280,
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '800', // Bolder Apple header
-        color: '#1C1C1E',
-        marginBottom: 10,
-        textAlign: 'center',
-        letterSpacing: -0.5,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#8E8E93',
-        textAlign: 'center',
-        marginBottom: 40,
-        lineHeight: 22,
-        paddingHorizontal: 10,
-    },
-    inputWrapper: {
-        width: '100%',
-        marginBottom: 30,
-    },
-    inputLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#8E8E93',
-        marginBottom: 8,
-        marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    input: {
-        width: '100%',
-        backgroundColor: '#fff', // White Clean
-        borderWidth: 1,
-        borderColor: '#E5E5EA',
-        padding: 18,
-        borderRadius: 14,
-        fontSize: 17,
-        fontWeight: '500',
-        color: '#000',
-    },
-    primaryBtn: {
-        width: '100%',
-        backgroundColor: '#000', // Sleek Black
-        padding: 18,
-        borderRadius: 16,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    primaryBtnText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 17,
-    },
-    accountsList: {
-        width: '100%',
-        marginBottom: 30,
-        gap: 15,
-    },
-    accountCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#E5E5EA',
-        // Removed shadows/margin bottom to fix gray artifacts
-    },
-    logoIcon: {
-        width: 48,
-        height: 48,
-        marginRight: 16,
-    },
-    accountInfo: {
-        flex: 1,
-        backgroundColor: 'transparent',
-    },
-    accountName: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#000',
-        marginBottom: 2,
-    },
-    accountDesc: {
-        fontSize: 13,
-        color: '#8E8E93',
-    },
-    successIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: Colors.light.success,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 30,
-        shadowColor: Colors.light.success,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-    infoCard: {
-        width: '100%',
-        backgroundColor: '#F2F2F7',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 40,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    infoText: {
-        fontSize: 15,
-        fontWeight: '500',
-        color: '#3A3A3C',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#E5E5EA',
-        marginVertical: 12,
-    },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    modalHeader: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    modalTitle: {
-        fontWeight: 'bold',
-        fontSize: 17,
-    },
-    closeText: {
-        color: '#007AFF',
-        fontSize: 17,
-        fontWeight: '600',
-    }
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    header: { paddingTop: 60, alignItems: 'center' },
+    content: { flex: 1, paddingHorizontal: 40, justifyContent: 'center' },
+
+    indicatorContainer: { flexDirection: 'row', gap: 8 },
+    indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F2F2F7' },
+    indicatorActive: { width: 24, backgroundColor: '#1C1C1E' },
+
+    stepContainer: { alignItems: 'center' },
+    heroImageContainer: { width: 200, height: 200, justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
+    blob: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: '#F8F9FB' },
+
+    title: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', textAlign: 'center', letterSpacing: -1, lineHeight: 38 },
+    subtitle: { fontSize: 16, color: '#8E8E93', textAlign: 'center', marginTop: 16, lineHeight: 24, fontWeight: '500' },
+
+    stepTitle: { fontSize: 28, fontWeight: '900', color: '#1C1C1E', alignSelf: 'flex-start', letterSpacing: -0.5 },
+    stepSubtitle: { fontSize: 15, color: '#8E8E93', alignSelf: 'flex-start', marginTop: 8, marginBottom: 32, fontWeight: '500' },
+
+    marketList: { width: '100%', maxHeight: 350, marginBottom: 32 },
+    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24, marginBottom: 16 },
+    marketLogo: { width: 80, height: 24 },
+    marketInfo: { flex: 1, marginLeft: 16 },
+    marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
+    marketAction: { fontSize: 12, color: Colors.light.primary, fontWeight: '700', marginTop: 2 },
+
+    mainBtn: { width: '100%', height: 64, backgroundColor: '#1C1C1E', borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 5 },
+    mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+
+    successIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#34C759', justifyContent: 'center', alignItems: 'center', marginBottom: 40, shadowColor: '#34C759', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 },
 });

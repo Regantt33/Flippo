@@ -1,15 +1,34 @@
-
-import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { InventoryItem, StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, Image, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Alert, Animated, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const PremiumButton = ({ onPress, children, style, disabled }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const handlePressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
+  const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[style, { transform: [{ scale }] }]}
+      disabled={disabled}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+};
 
 export default function InventoryScreen() {
   const router = useRouter();
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [search, setSearch] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -24,74 +43,68 @@ export default function InventoryScreen() {
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      "Delete Item",
-      "Are you sure you want to delete this item?",
+      "Elimina Oggeto",
+      "Vuoi davvero rimuovere questo oggetto?",
       [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await StorageService.removeItem(id);
-            loadItems();
-          }
-        }
+        { text: "Annulla", style: "cancel" },
+        { text: "Elimina", style: "destructive", onPress: async () => { await StorageService.removeItem(id); loadItems(); } }
       ]
     );
   };
+
+  const filteredItems = items.filter(i =>
+    i.title.toLowerCase().includes(search.toLowerCase()) ||
+    i.category.toLowerCase().includes(search.toLowerCase())
+  );
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const mainImage = item.images && item.images.length > 0 ? { uri: item.images[0] } : null;
 
     return (
       <View style={styles.itemCard}>
-        {mainImage ? (
-          <Image source={mainImage} style={styles.itemImage} />
-        ) : (
-          <View style={[styles.itemImage, { justifyContent: 'center', alignItems: 'center' }]}>
-            <FontAwesome name="image" size={24} color="#555" />
-          </View>
-        )}
+        <View style={styles.imageBox}>
+          {mainImage ? (
+            <Image source={mainImage} style={styles.itemImage} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <FontAwesome name="image" size={20} color="#C7C7CC" />
+            </View>
+          )}
+        </View>
 
         <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle}>{item.title}</Text>
-          <Text style={styles.itemPrice}>€{item.price}</Text>
+          <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.itemPrice}>€{parseFloat(item.price).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
 
-          <View style={styles.metaRow}>
-            {/* Marketplace Indicators */}
-            <View style={styles.marketplaceRow}>
-              {item.listedOn?.includes('vinted') && (
-                <View style={[styles.mkBadge, { backgroundColor: '#09B1BA' }]}><Text style={styles.mkBadgeText}>Vinted</Text></View>
-              )}
-              {item.listedOn?.includes('ebay') && (
-                <View style={[styles.mkBadge, { backgroundColor: '#E53238' }]}><Text style={styles.mkBadgeText}>eBay</Text></View>
-              )}
-              {item.listedOn?.includes('subito') && (
-                <View style={[styles.mkBadge, { backgroundColor: '#FF3B30' }]}><Text style={styles.mkBadgeText}>Subito</Text></View>
-              )}
-            </View>
+          <View style={styles.mkContainer}>
+            {item.listedOn?.map(id => (
+              <View key={id} style={[styles.mkDot, { backgroundColor: id === 'vinted' ? '#09B1BA' : id === 'ebay' ? '#E53238' : '#FF3B30' }]} />
+            ))}
+            {(!item.listedOn || item.listedOn.length === 0) && (
+              <Text style={styles.notListedText}>Non pubblicato</Text>
+            )}
           </View>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#F2F2F7' }]}
+          <PremiumButton
+            style={[styles.actionBtn, { backgroundColor: '#F8F9FB' }]}
             onPress={() => router.push({ pathname: '/new-item', params: { id: item.id } })}
           >
-            <FontAwesome name="pencil" size={14} color="#8E8E93" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#E5F9FF' }]}
+            <FontAwesome name="pencil" size={12} color="#8E8E93" />
+          </PremiumButton>
+          <PremiumButton
+            style={[styles.actionBtn, { backgroundColor: Colors.light.primary + '10' }]}
             onPress={() => router.push({ pathname: '/new-item', params: { id: item.id, openWizard: 'true' } })}
           >
-            <FontAwesome name="rocket" size={14} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#FFF0F0' }]}
+            <FontAwesome name="rocket" size={12} color={Colors.light.primary} />
+          </PremiumButton>
+          <PremiumButton
+            style={[styles.actionBtn, { backgroundColor: '#FF3B3010' }]}
             onPress={() => handleDelete(item.id)}
           >
-            <FontAwesome name="trash" size={14} color="#FF3B30" />
-          </TouchableOpacity>
+            <FontAwesome name="trash-o" size={12} color="#FF3B30" />
+          </PremiumButton>
         </View>
       </View>
     )
@@ -99,27 +112,40 @@ export default function InventoryScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <FontAwesome name="search" size={16} color="#aaa" style={styles.searchIcon} />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Inventario</Text>
+        <PremiumButton style={styles.addFab} onPress={() => router.push('/new-item')}>
+          <FontAwesome name="plus" size={18} color="#fff" />
+        </PremiumButton>
+      </View>
+
+      <View style={styles.searchBox}>
+        <FontAwesome name="search" size={14} color="#8E8E93" style={styles.searchIcon} />
         <TextInput
-          placeholder="Search inventory..."
-          placeholderTextColor="#aaa"
+          placeholder="Cerca nell'inventario..."
+          placeholderTextColor="#C7C7CC"
           style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
         />
       </View>
 
       <FlatList
-        data={items}
+        data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View style={styles.listHeader}>
-            <Text style={styles.headerTitle}>My Inventory</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/new-item')}>
-              <FontAwesome name="plus" size={16} color="#fff" />
-              <Text style={styles.addBtnText}>Add New</Text>
-            </TouchableOpacity>
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyView}>
+            <View style={styles.emptyIcon}>
+              <FontAwesome name="cube" size={40} color="#F2F2F7" />
+            </View>
+            <Text style={styles.emptyTitle}>Inizia ora</Text>
+            <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto e Flippo ti aiuterà a venderlo ovunque.</Text>
+            <PremiumButton style={styles.emptyBtn} onPress={() => router.push('/new-item')}>
+              <Text style={styles.emptyBtnText}>Aggiungi Prodotto</Text>
+            </PremiumButton>
           </View>
         }
       />
@@ -128,138 +154,62 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    margin: 20,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    height: 45,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  listHeader: {
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  addBtn: {
+  headerTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
+  addFab: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#1C1C1E', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
+
+  searchBox: {
     flexDirection: 'row',
-    backgroundColor: Colors.dark.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
     alignItems: 'center',
-    gap: 5,
+    backgroundColor: '#F8F9FB',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    height: 52,
   },
-  addBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
+  searchIcon: { marginRight: 12 },
+  searchInput: { flex: 1, fontSize: 16, color: '#1C1C1E', fontWeight: '600' },
+
+  listContainer: { paddingHorizontal: 24, paddingBottom: 120 },
+
   itemCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F2F2F7',
   },
-  itemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#333',
-  },
-  itemInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  itemTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  itemPrice: {
-    color: Colors.dark.success,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  badgeActive: { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
-  badgeDraft: { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-  badgeSold: { backgroundColor: 'rgba(239, 68, 68, 0.2)' },
-  badgeText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  editBtn: {
-    padding: 10,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  marketplaceRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  mkBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mkBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  }
+  imageBox: { borderRadius: 16, overflow: 'hidden', backgroundColor: '#F8F9FB' },
+  itemImage: { width: 72, height: 72 },
+  imagePlaceholder: { width: 72, height: 72, justifyContent: 'center', alignItems: 'center' },
+
+  itemInfo: { flex: 1, marginLeft: 16 },
+  itemTitle: { fontWeight: '800', fontSize: 16, color: '#1C1C1E', marginBottom: 2 },
+  itemPrice: { color: '#8E8E93', fontWeight: '700', fontSize: 14, marginBottom: 8 },
+
+  mkContainer: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  mkDot: { width: 10, height: 10, borderRadius: 5 },
+  notListedText: { fontSize: 11, color: '#C7C7CC', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  actions: { flexDirection: 'row', gap: 8 },
+  actionBtn: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+
+  emptyView: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F8F9FB', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 22, fontWeight: '900', color: '#1C1C1E' },
+  emptySubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', marginTop: 8, paddingHorizontal: 40, fontWeight: '500', lineHeight: 22 },
+  emptyBtn: { marginTop: 32, backgroundColor: '#1C1C1E', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 20 },
+  emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
