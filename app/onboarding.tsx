@@ -4,13 +4,12 @@ import { Colors } from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
-import { SCRIPTS } from '@/utils/scripts';
+import { AuthService, MARKETPLACES } from '@/services/AuthService';
 
 export default function OnboardingScreen() {
     const router = useRouter();
@@ -20,11 +19,6 @@ export default function OnboardingScreen() {
     // Animation Values
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
-
-    // Login Modal State
-    const [showLoginModal, setShowLoginModal] = useState(false);
-    const [loginUrl, setLoginUrl] = useState('');
-    const [activePlatform, setActivePlatform] = useState('');
 
     useEffect(() => {
         // Reset and play animation on step change
@@ -41,10 +35,9 @@ export default function OnboardingScreen() {
         else router.replace('/loading'); // Finish onboarding
     };
 
-    const openLogin = (platform: string, url: string) => {
-        setActivePlatform(platform);
-        setLoginUrl(url);
-        setShowLoginModal(true);
+    // Use centralized AuthService for login
+    const openLogin = async (marketplaceId: string) => {
+        await AuthService.openLogin(marketplaceId);
     };
 
     const StepIndicator = () => (
@@ -86,32 +79,26 @@ export default function OnboardingScreen() {
             <Text style={styles.subtitle}>Log in once to enable Smart Sync & Auto-Compile.</Text>
 
             <View style={styles.accountsList}>
-                <TouchableOpacity style={styles.accountCard} onPress={() => openLogin('Vinted', 'https://www.vinted.it/member/general/login')}>
-                    <MarketplaceLogo id="vinted" style={styles.logoIcon} />
-                    <View style={styles.accountInfo}>
-                        <Text style={styles.accountName}>Vinted</Text>
-                        <Text style={styles.accountDesc}>Syncs notifications & listings</Text>
-                    </View>
-                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.accountCard} onPress={() => openLogin('eBay', 'https://signin.ebay.it/ws/eBayISAPI.dll')}>
-                    <MarketplaceLogo id="ebay" style={styles.logoIcon} />
-                    <View style={styles.accountInfo}>
-                        <Text style={styles.accountName}>eBay</Text>
-                        <Text style={styles.accountDesc}>Supports quick auto-fill</Text>
-                    </View>
-                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.accountCard} onPress={() => openLogin('Subito', 'https://areariservata.subito.it/log-in')}>
-                    <MarketplaceLogo id="subito" style={styles.logoIcon} />
-                    <View style={styles.accountInfo}>
-                        <Text style={styles.accountName}>Subito</Text>
-                        <Text style={styles.accountDesc}>Local sales management</Text>
-                    </View>
-                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                </TouchableOpacity>
+                {MARKETPLACES.map((marketplace) => (
+                    <TouchableOpacity
+                        key={marketplace.id}
+                        style={styles.accountCard}
+                        onPress={() => openLogin(marketplace.id)}
+                    >
+                        <MarketplaceLogo id={marketplace.id} style={styles.logoIcon} />
+                        <View style={styles.accountInfo}>
+                            <Text style={styles.accountName}>{marketplace.name}</Text>
+                            <Text style={styles.accountDesc}>
+                                {marketplace.id === 'vinted' && 'Syncs notifications & listings'}
+                                {marketplace.id === 'ebay' && 'Supports quick auto-fill'}
+                                {marketplace.id === 'subito' && 'Local sales management'}
+                                {marketplace.id === 'depop' && 'Fashion marketplace'}
+                                {marketplace.id === 'wallapop' && 'Buy & Sell Nearby'}
+                            </Text>
+                        </View>
+                        <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
+                    </TouchableOpacity>
+                ))}
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
@@ -159,26 +146,6 @@ export default function OnboardingScreen() {
                     {step === 3 && renderStep3()}
                 </ScrollView>
             </KeyboardAvoidingView>
-
-            {/* Login WebView Modal */}
-            <Modal visible={showLoginModal} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Login to {activePlatform}</Text>
-                        <TouchableOpacity onPress={() => setShowLoginModal(false)}>
-                            <Text style={styles.closeText}>Done</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <WebView
-                        source={{ uri: loginUrl }}
-                        style={{ flex: 1 }}
-                        userAgent="Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36"
-                        injectedJavaScriptBeforeContentLoaded={SCRIPTS.ANTI_BOT_SCRIPT}
-                        sharedCookiesEnabled={true}
-                        thirdPartyCookiesEnabled={true}
-                    />
-                </View>
-            </Modal>
         </View>
     );
 }
@@ -303,6 +270,7 @@ const styles = StyleSheet.create({
     },
     accountInfo: {
         flex: 1,
+        backgroundColor: 'transparent',
     },
     accountName: {
         fontSize: 17,

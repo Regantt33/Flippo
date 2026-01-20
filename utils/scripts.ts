@@ -79,42 +79,30 @@ export const SCRIPTS = {
     })();
   `,
 
-  // Anti-Bot: Advanced Hardening to mask Webdriver and mimic real device
+  // Anti-Bot: Advanced Hardening for Vinted/Cloudflare
   ANTI_BOT_SCRIPT: `
     (function() {
       try {
-        // 1. Mask WebDriver
+        // 1. Mask WebDriver & Automation properties
         const newProto = navigator.__proto__;
         delete newProto.webdriver;
         navigator.__proto__ = newProto;
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+        
+        // 2. Mock Plugins (iOS typically has 0, but preventing empty array checks sometimes helps)
+        // Actually for iOS Safari, plugins is usually empty length 0 but defined.
+        Object.defineProperty(navigator, 'plugins', { get: () => [], enumerable: true });
+        Object.defineProperty(navigator, 'mimeTypes', { get: () => [], enumerable: true });
 
-        // 2. Mock Plugins (Standard Mobile typically has 0-5, but let's make it look populated)
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => {
-             const p = [
-               { name: "Chrome PDF Plugin", filename: "internal-pdf-viewer", description: "Portable Document Format" },
-               { name: "Chrome PDF Viewer", filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai", description: "Portable Document Format" },
-               { name: "Native Client", filename: "internal-nacl-plugin", description: "" }
-             ];
-             return p;
-          }
-        });
+        // 3. Mock Languages - Italian
+        Object.defineProperty(navigator, 'languages', { get: () => ['it-IT', 'it', 'en-US', 'en'], enumerable: true });
+        Object.defineProperty(navigator, 'language', { get: () => 'it-IT', enumerable: true });
 
-        // 3. Mock Languages - STRICT ITALIAN as requested
-        Object.defineProperty(navigator, 'languages', {
-          get: () => ['it-IT', 'it', 'en-US', 'en'],
-        });
-        Object.defineProperty(navigator, 'language', {
-          get: () => 'it-IT',
-        });
+        // 4. Hardware Concurrency
+        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 6, enumerable: true });
+        Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, enumerable: true });
 
-        // 4. Mock Hardware Concurrency (Real devices usually have 4-8)
-        Object.defineProperty(navigator, 'hardwareConcurrency', {
-          get: () => 8,
-        });
-
-        // 5. Remove Selenium/Automation variables
+        // 5. Mask Automation Variables (Selenium, etc)
         const keywords = [
           'cdc_adoQpoasnfa76pfcZLmcfl_Array', 
           'cdc_adoQpoasnfa76pfcZLmcfl_Promise', 
@@ -141,27 +129,28 @@ export const SCRIPTS = {
         ];
         
         keywords.forEach(k => {
-            try { delete window[k]; } catch(e) {}
+            try { 
+                delete window[k]; 
+                Object.defineProperty(window, k, { get: () => undefined });
+            } catch(e) {}
         });
 
-        // 6. Fix Permissions (Notification permission often leaks bots)
+        // 6. Override Permissions
         const originalQuery = window.navigator.permissions.query;
         window.navigator.permissions.query = (parameters) => (
           parameters.name === 'notifications' ?
             Promise.resolve({ state: Notification.permission }) :
             originalQuery(parameters)
         );
-
-        // 7. Mock Connection (Optional, but adds realism)
-        if (!navigator.connection) {
-            Object.defineProperty(navigator, 'connection', {
-                get: () => ({
-                    effectiveType: '4g',
-                    rtt: 50,
-                    downlink: 10,
-                    saveData: false
-                })
-            });
+        
+        // 7. Touch Support (Essential for mobile detection)
+        Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5, enumerable: true });
+        
+        // 8. Visual Viewport & Screen
+        // Ensure screen dimensions match a typical mobile device (e.g. 390x844 for iPhone 13/14)
+        // This is skipped if window.top matches, but for iframe/webview it helps consistency
+        if (!window.visualViewport) {
+             window.visualViewport = { width: window.innerWidth, height: window.innerHeight };
         }
 
       } catch (e) {

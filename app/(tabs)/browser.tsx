@@ -95,8 +95,8 @@ export default function BrowserScreen() {
                 ref={webViewRef}
                 source={{ uri: currentUrl }}
                 style={{ flex: 1 }}
-                // Anti-detection: Fixed Pixel 7 / Android 13 User Agent
-                userAgent="Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TQ3A.230901.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/117.0.0.0 Mobile Safari/537.36"
+                // Anti-detection: iPhone 14 / Safari Mobile (Standard, very trusted)
+                userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
                 onMessage={handleMessage}
                 // Run Anti-Bot script BEFORE content loads to mask webdriver
                 injectedJavaScriptBeforeContentLoaded={SCRIPTS.ANTI_BOT_SCRIPT}

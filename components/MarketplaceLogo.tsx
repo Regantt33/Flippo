@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Image, ImageStyle, StyleProp, StyleSheet, Text, View } from 'react-native';
 
-const MARKETPLACE_LOGOS: Record<string, string> = {
-    'vinted': 'https://upload.wikimedia.org/wikipedia/commons/2/29/Vinted_logo.png',
-    'ebay': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/EBay_logo.svg/512px-EBay_logo.svg.png',
-    'subito': 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Subito.it_logo.png',
-    'depop': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Depop_logo.svg/512px-Depop_logo.svg.png',
-    'wallapop': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Wallapop_logo_2019.svg/512px-Wallapop_logo_2019.svg.png',
+// Local assets for reliable loading
+const MARKETPLACE_LOGOS: Record<string, any> = {
+    'vinted': require('../assets/logos/vinted.png'),
+    'subito': require('../assets/logos/subito.png'),
+    'depop': require('../assets/logos/depop.png'),
+    'wallapop': require('../assets/logos/wallapop.png'),
+};
+
+// Fallback URLs for logos not available locally
+const MARKETPLACE_LOGO_URLS: Record<string, string> = {
+    'ebay': 'https://logo.clearbit.com/ebay.com',
 };
 
 interface Props {
@@ -16,10 +21,13 @@ interface Props {
 }
 
 export function MarketplaceLogo({ id, style, resizeMode = 'contain' }: Props) {
-    const uri = MARKETPLACE_LOGOS[id.toLowerCase()];
     const [error, setError] = useState(false);
+    const lowerId = id.toLowerCase();
+    const localAsset = MARKETPLACE_LOGOS[lowerId];
+    const urlAsset = MARKETPLACE_LOGO_URLS[lowerId];
 
-    if (!uri || error) {
+    // If error or no asset available, show placeholder
+    if (error || (!localAsset && !urlAsset)) {
         return (
             <View style={[styles.placeholder, style]}>
                 <Text style={styles.placeholderText}>{id.charAt(0).toUpperCase()}</Text>
@@ -27,9 +35,22 @@ export function MarketplaceLogo({ id, style, resizeMode = 'contain' }: Props) {
         );
     }
 
+    // Use local asset if available
+    if (localAsset) {
+        return (
+            <Image
+                source={localAsset}
+                style={[styles.base, style]}
+                resizeMode={resizeMode}
+                onError={() => setError(true)}
+            />
+        );
+    }
+
+    // Fallback to URL
     return (
         <Image
-            source={{ uri }}
+            source={{ uri: urlAsset }}
             style={[styles.base, style]}
             resizeMode={resizeMode}
             onError={() => setError(true)}
@@ -43,13 +64,13 @@ const styles = StyleSheet.create({
         height: 40,
     },
     placeholder: {
-        backgroundColor: '#E5E5EA',
+        backgroundColor: '#007AFF',
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
     },
     placeholderText: {
-        color: '#8E8E93',
+        color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
     }

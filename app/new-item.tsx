@@ -63,10 +63,12 @@ export default function NewItemScreen() {
     const [magicActive, setMagicActive] = useState(false);
     const [savedItemId, setSavedItemId] = useState<string | null>(null);
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
+    const [connectedMarketplaces, setConnectedMarketplaces] = useState<string[]>([]);
     const isEditing = !!params.id;
 
     useFocusEffect(useCallback(() => {
         loadMarketplaces();
+        loadConnectedMarketplaces();
         if (params.id) {
             loadItem(params.id as string);
         }
@@ -74,6 +76,11 @@ export default function NewItemScreen() {
             setShowPublishWizard(true);
         }
     }, [params.id, params.openWizard]));
+
+    const loadConnectedMarketplaces = async () => {
+        const connected = await AuthService.getConnections();
+        setConnectedMarketplaces(connected);
+    };
 
     const loadMarketplaces = async () => {
         const m = await SettingsService.getMarketplaces();
@@ -395,19 +402,26 @@ export default function NewItemScreen() {
                                     No marketplaces enabled.{'\n'}Go to Profile to connect.
                                 </Text>
                             ) : (
-                                marketplaces.map(m => (
-                                    <TouchableOpacity
-                                        key={m.id}
-                                        style={styles.wizCard}
-                                        onPress={() => handlePublish(m.id)}
-                                    >
-                                        <MarketplaceLogo
-                                            id={m.id}
-                                            style={styles.wizLogo}
-                                        />
-                                        <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
-                                    </TouchableOpacity>
-                                ))
+                                marketplaces.map(m => {
+                                    const isConnected = connectedMarketplaces.includes(m.id);
+                                    return (
+                                        <View key={m.id} style={{ width: '100%', marginBottom: 8 }}>
+                                            <TouchableOpacity
+                                                style={styles.wizCard}
+                                                onPress={() => isConnected ? handlePublish(m.id) : AuthService.openLogin(m.id).then(loadConnectedMarketplaces)}
+                                            >
+                                                <MarketplaceLogo
+                                                    id={m.id}
+                                                    style={styles.wizLogo}
+                                                />
+                                                {!isConnected && (
+                                                    <Text style={{ fontSize: 12, color: '#FF9500', marginLeft: 8, flex: 1 }}>Login Required</Text>
+                                                )}
+                                                <FontAwesome name={isConnected ? "chevron-right" : "sign-in"} size={14} color={isConnected ? "#C7C7CC" : "#007AFF"} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    );
+                                })
                             )}
                         </ScrollView>
 
@@ -458,7 +472,7 @@ const styles = StyleSheet.create({
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 },
     modalTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', color: '#1C1C1E' },
     modalSubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', marginBottom: 20 },
-    wizCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F2F2F7' }, // removed shadow
+    wizCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E5EA' },
     wizLogo: { width: 120, height: 40 },
     secondaryBtn: { paddingVertical: 12, marginTop: 4, alignSelf: 'center' },
     secondaryBtnText: { color: '#8E8E93', fontWeight: '600', fontSize: 15 },

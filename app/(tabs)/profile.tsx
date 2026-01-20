@@ -1,6 +1,7 @@
 
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
+import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,13 +14,16 @@ export default function ProfileScreen() {
     const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [connectedMarketplaces, setConnectedMarketplaces] = useState<string[]>([]);
 
     const loadData = async () => {
         setLoading(true);
         const m = await SettingsService.getMarketplaces();
         const p = await SettingsService.getProfile();
+        const connected = await AuthService.getConnections();
         setMarketplaces(m);
         setProfile(p);
+        setConnectedMarketplaces(connected);
         setLoading(false);
     };
 
@@ -30,6 +34,11 @@ export default function ProfileScreen() {
     const toggleMarketplace = async (id: any, val: boolean) => {
         const updated = await SettingsService.updateMarketplace(id, { isEnabled: val });
         if (updated) setMarketplaces(updated);
+    };
+
+    const handleLogin = async (marketplaceId: string) => {
+        await AuthService.openLogin(marketplaceId);
+        await loadData(); // Refresh connection status
     };
 
     const handleSaveProfile = async () => {
@@ -95,7 +104,7 @@ export default function ProfileScreen() {
                     </View>
 
                     {editing ? (
-                        <View style={{ width: '100%', marginTop: 15 }}>
+                        <View style={{ width: '100%', marginTop: 15, backgroundColor: 'transparent' }}>
                             <Text style={styles.inputLabel}>Display Name</Text>
                             <TextInput
                                 style={styles.input}
@@ -110,7 +119,7 @@ export default function ProfileScreen() {
                             />
                         </View>
                     ) : (
-                        <View style={{ alignItems: 'center', marginTop: 10 }}>
+                        <View style={{ alignItems: 'center', marginTop: 10, backgroundColor: 'transparent' }}>
                             <Text style={styles.userName}>{profile.name}</Text>
                             <Text style={styles.userBio}>{profile.email || 'No email set'}</Text>
                         </View>
@@ -120,31 +129,42 @@ export default function ProfileScreen() {
                 {/* 2. Marketplace Manager */}
                 <Text style={styles.sectionHeader}>CONNECTED MARKETPLACES</Text>
                 <View style={styles.sectionContainer}>
-                    {marketplaces.map((m) => (
-                        <View key={m.id} style={styles.row}>
-                            <View style={styles.rowLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: m.color }]}>
-                                    <FontAwesome name={m.icon as any} size={18} color="#fff" />
+                    {marketplaces.map((m) => {
+                        const isConnected = connectedMarketplaces.includes(m.id);
+                        return (
+                            <View key={m.id} style={styles.row}>
+                                <View style={styles.rowLeft}>
+                                    <View style={[styles.iconBox, { backgroundColor: m.color }]}>
+                                        <FontAwesome name={m.icon as any} size={18} color="#fff" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.rowTitle}>{m.name}</Text>
+                                        <Text style={styles.rowSubtitle}>
+                                            {m.isEnabled ? (isConnected ? 'Ready to sync' : 'Requires login') : 'Disabled'}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <View>
-                                    <Text style={styles.rowTitle}>{m.name}</Text>
-                                    <Text style={styles.rowSubtitle}>
-                                        {m.isEnabled ? (m.isLoggedIn ? 'Ready to sync' : 'Requires login') : 'Disabled'}
-                                    </Text>
-                                </View>
-                            </View>
 
-                            <View style={styles.rowRight}>
-                                {m.isEnabled && <StatusBadge loggedIn={m.isLoggedIn} />}
-                                <Switch
-                                    style={{ marginLeft: 10 }}
-                                    value={m.isEnabled}
-                                    onValueChange={(v) => toggleMarketplace(m.id, v)}
-                                    trackColor={{ false: '#767577', true: Colors.light.primary }}
-                                />
+                                <View style={styles.rowRight}>
+                                    {m.isEnabled && !isConnected && (
+                                        <TouchableOpacity
+                                            onPress={() => handleLogin(m.id)}
+                                            style={{ marginRight: 10, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#007AFF', borderRadius: 8 }}
+                                        >
+                                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Login</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {m.isEnabled && isConnected && <StatusBadge loggedIn={isConnected} />}
+                                    <Switch
+                                        style={{ marginLeft: 10 }}
+                                        value={m.isEnabled}
+                                        onValueChange={(v) => toggleMarketplace(m.id, v)}
+                                        trackColor={{ false: '#767577', true: Colors.light.primary }}
+                                    />
+                                </View>
                             </View>
-                        </View>
-                    ))}
+                        );
+                    })}
                 </View>
 
                 {/* 3. Global Settings */}
@@ -227,8 +247,9 @@ const styles = StyleSheet.create({
     badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     badgeSuccess: { backgroundColor: '#E4F9E9' },
     badgeWarning: { backgroundColor: '#FFF4E5' },
-    textSuccess: { fontSize: 11, color: '#34C759', fontWeight: '700' },
-    textWarning: { fontSize: 11, color: '#FF9500', fontWeight: '700' },
+    badgeText: { fontSize: 11, fontWeight: '700' },
+    textSuccess: { color: '#34C759' },
+    textWarning: { color: '#FF9500' },
 
     rowBtn: { flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
     rowBtnText: { fontSize: 16 },
