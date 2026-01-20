@@ -204,20 +204,14 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, fontWeight: '500', color: '#8E8E93' },
   groupCard: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: 24,
     marginBottom: 20,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 3,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -243,12 +237,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#F2F2F7',
     marginLeft: 42,
   },
   dividerFull: {
     height: 1,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#F2F2F7',
     marginLeft: 16,
   },
   listItem: {
@@ -260,7 +254,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   itemTime: { fontSize: 13, color: '#8E8E93' },
-  dividerFull: { height: 1, backgroundColor: '#E5E5EA', marginLeft: 16 },
   actionRow: { padding: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#fafafa', borderTopWidth: 1, borderTopColor: '#f0f0f0', gap: 8 },
   actionText: { fontSize: 14, fontWeight: '500', color: '#8E8E93' },
   notifRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

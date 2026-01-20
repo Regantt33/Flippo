@@ -1,4 +1,3 @@
-
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
@@ -29,42 +28,32 @@ const CATEGORIES: { id: InventoryCategory; label: string; icon: any; color: stri
     { id: 'Other', label: 'Other', icon: 'cube', color: '#8E8E93' },
 ];
 
-const COLORS_PALETTE = [
-    '#000000', '#FFFFFF', '#808080', '#FF0000', '#0000FF', '#008000', '#FFFF00', '#FFC0CB', '#800080', '#FFA500', '#A52A2A', '#D2691E'
-];
-
 export default function NewItemScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const [images, setImages] = useState<string[]>([]);
 
-    // Core
+    // Core State
     const [title, setTitle] = useState('');
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState<InventoryCategory>('Fashion');
+    const [status, setStatus] = useState<'Active' | 'Draft' | 'Sold'>('Draft');
     const [quantity, setQuantity] = useState('1');
     const [itemColor, setItemColor] = useState('');
-
-    // Dynamic Fields
     const [brand, setBrand] = useState('');
     const [condition, setCondition] = useState('');
-
-    // Fashion
     const [size, setSize] = useState('');
     const [material, setMaterial] = useState('');
-
-    // Tech/Games
     const [model, setModel] = useState('');
     const [specs, setSpecs] = useState('');
     const [platform, setPlatform] = useState('');
     const [isbn, setIsbn] = useState('');
-
-    // Authentication (Boolean)
     const [hasBox, setHasBox] = useState(false);
     const [hasPapers, setHasPapers] = useState(false);
     const [hasReceipt, setHasReceipt] = useState(false);
 
+    // UI State
     const [showPublishWizard, setShowPublishWizard] = useState(false);
     const [magicActive, setMagicActive] = useState(false);
     const [savedItemId, setSavedItemId] = useState<string | null>(null);
@@ -102,7 +91,8 @@ export default function NewItemScreen() {
             setDescription(item.description);
             setCategory(item.category);
             setImages(item.images || []);
-            setQuantity(item.quantity.toString());
+            setQuantity(item.quantity?.toString() || '1');
+            setStatus(item.status || 'Draft');
             setItemColor(item.color || '');
             setBrand(item.brand || '');
             setCondition(item.condition || '');
@@ -118,60 +108,60 @@ export default function NewItemScreen() {
         }
     };
 
-    // AI Heuristics
     const runMiniAI = () => {
         if (!title) return;
         const lowerTitle = title.toLowerCase();
         let detected = false;
 
-        // Category
+        // Simple Heuristics for Category
         if (lowerTitle.includes('ps5') || lowerTitle.includes('nintendo') || lowerTitle.includes('game')) { setCategory('Videogames'); detected = true; }
         else if (lowerTitle.includes('iphone') || lowerTitle.includes('macbook')) { setCategory('Electronics'); detected = true; }
         else if (lowerTitle.includes('lego')) { setCategory('Collectibles'); detected = true; }
-        else if (lowerTitle.includes('libro') || lowerTitle.includes('book')) { setCategory('Entertainment'); detected = true; }
-        else if (lowerTitle.includes('jeans') || lowerTitle.includes('t-shirt') || lowerTitle.includes('dress') || lowerTitle.includes('scarpe')) {
-            setCategory('Fashion');
-            detected = true;
-        }
 
-        // Brand
-        ['nike', 'adidas', 'apple', 'samsung', 'zara', 'sony', 'gucci', 'lego', 'rolex'].forEach(b => {
-            if (lowerTitle.includes(b)) { setBrand(b.charAt(0).toUpperCase() + b.slice(1)); detected = true; }
+        // Simple Brand detection
+        ['nike', 'adidas', 'apple', 'samsung', 'zara', 'sony', 'gucci', 'lego'].forEach(b => {
+            if (lowerTitle.includes(b) && !brand) { setBrand(b.charAt(0).toUpperCase() + b.slice(1)); detected = true; }
         });
-
-        // Condition
-        if (lowerTitle.includes('nuovo') || lowerTitle.includes('sealed')) setCondition('New');
-
-        // Auth
-        if (lowerTitle.includes('full set') || lowerTitle.includes('scatola')) { setHasBox(true); setHasReceipt(true); detected = true; }
 
         if (detected) {
             setMagicActive(true);
-            setTimeout(() => setMagicActive(false), 3000);
+            setTimeout(() => setMagicActive(false), 2000);
         }
     };
 
     const handleAddPhoto = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') return Alert.alert("Permission Required", "Allow photo access to inventory items.");
+        if (status !== 'granted') return Alert.alert("Permission Required", "Allow photo access.");
 
         let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.8 });
         if (!result.canceled) setImages([...images, result.assets[0].uri]);
-        if (!result.canceled) setImages([...images, result.assets[0].uri]);
+    };
+
+    const handleSave = async () => {
+        if (!title) return Alert.alert("Required", "Please enter a title.");
+
+        const itemData = {
+            title, price, description, images, category,
+            brand, condition, size, material, model, specs, platform, isbn,
+            hasBox, hasPapers, hasReceipt, color: itemColor,
+            quantity: parseInt(quantity) || 1,
+            status
+        };
+
+        if (isEditing) {
+            await StorageService.updateItem(params.id as string, itemData);
+            Alert.alert("Success", "Item updated!");
+            router.back();
+        } else {
+            const newItem = await StorageService.addItem(itemData);
+            setSavedItemId(newItem.id);
+            setShowPublishWizard(true);
+        }
     };
 
     const handlePublish = async (platformId: string) => {
         const itemId = savedItemId || (params.id as string);
         if (!itemId) return;
-
-        // Optimistic update: mark as listed
-        const currentItem = await StorageService.getItems().then(items => items.find(i => i.id === itemId));
-        if (currentItem) {
-            const currentListed = currentItem.listedOn || [];
-            if (!currentListed.includes(platformId)) {
-                await StorageService.updateItem(itemId, { listedOn: [...currentListed, platformId] });
-            }
-        }
 
         setShowPublishWizard(false);
         router.push({
@@ -180,59 +170,10 @@ export default function NewItemScreen() {
         });
     };
 
-    const handleSave = async () => {
-        if (!title) return Alert.alert("Required", "Please enter a title.");
-
-        // Smart Description Builder
-        let fullDesc = description;
-
-        const itemData = {
-            title, price, description: fullDesc, images, category,
-            brand, condition, size, material, model, specs, platform, isbn,
-            hasBox, hasPapers, hasReceipt, color: itemColor,
-            quantity: parseInt(quantity) || 1,
-            status: 'Draft' as const
-        };
-
-        if (isEditing) {
-            await StorageService.updateItem(params.id as string, itemData);
-            Alert.alert("Updated", "Item updated successfully!");
-            router.back();
-        } else {
-            // Append auto-generated details only if simple description provided
-            const addLine = (label: string, val: string | undefined) => { if (val) fullDesc += `\n${label}: ${val}`; };
-            const addBool = (label: string, val: boolean) => { if (val) fullDesc += `\n- ${label}`; };
-
-            if (!description.includes('Brand:')) {
-                fullDesc += '\n';
-                addLine('Brand', brand);
-                addLine('Size', size);
-                addLine('Material', material);
-                addLine('Model', model);
-                addLine('Specs', specs);
-                addLine('Platform', platform);
-                addLine('Color', itemColor);
-                addLine('ISBN', isbn);
-                addLine('Condition', condition);
-                if (category === 'Collectibles' || category === 'Electronics' || category === 'Fashion' || category === 'Videogames') {
-                    addBool('Original Box Included', hasBox);
-                    addBool('Original Papers Included', hasPapers);
-                    addBool('Receipt Available', hasReceipt);
-                }
-            }
-
-            const newItem = await StorageService.addItem({ ...itemData, description: fullDesc });
-            setSavedItemId(newItem.id);
-            setShowPublishWizard(true);
-        }
-    };
-
-    // Helpers
-    const isFashion = ['Fashion', 'Women', 'Men', 'Kids', 'Shoes', 'Bags', 'Accessories'].includes(category);
+    // Style Helpers
+    const isFashion = ['Fashion', 'Shoes', 'Bags', 'Accessories'].includes(category);
     const isTech = ['Electronics', 'Small Tech'].includes(category);
     const isGaming = ['Videogames'].includes(category);
-    const isMedia = ['Entertainment'].includes(category);
-    const isLuxury = ['Collectibles', 'Electronics', 'Fashion', 'Shoes', 'Bags'].includes(category);
 
     const Chip = ({ label, selected, onPress }: { label: string, selected: boolean, onPress: () => void }) => (
         <TouchableOpacity style={[styles.chip, selected && styles.chipSelected]} onPress={onPress}>
@@ -240,209 +181,206 @@ export default function NewItemScreen() {
         </TouchableOpacity>
     );
 
-    const BooleanSwitch = ({ label, value, onValueChange }: { label: string, value: boolean, onValueChange: (v: boolean) => void }) => (
-        <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>{label}</Text>
-            <Switch value={value} onValueChange={onValueChange} trackColor={{ false: '#767577', true: Colors.light.primary }} />
-        </View>
-    );
-
     return (
         <View style={styles.container}>
+            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}><FontAwesome name="times" size={20} /></TouchableOpacity>
-                <Text style={styles.headerTitle}>{isEditing ? 'Edit Item' : 'New Item'}</Text>
-                <TouchableOpacity onPress={handleSave}><Text style={styles.saveText}>Save</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                    <FontAwesome name="chevron-left" size={18} color="#1C1C1E" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{isEditing ? 'Edit Item' : 'Create Item'}</Text>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+                    <Text style={styles.saveBtnText}>Save</Text>
+                </TouchableOpacity>
             </View>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-
-                    {/* Magic Input */}
-                    <View style={[styles.magicContainer, magicActive && styles.magicActive]}>
-                        <FontAwesome name="magic" size={16} color={magicActive ? '#fff' : Colors.light.primary} style={{ marginRight: 10 }} />
-                        <TextInput
-                            style={{ flex: 1, fontSize: 16, fontWeight: '500', color: magicActive ? '#fff' : '#000' }}
-                            placeholder="What are you selling?"
-                            placeholderTextColor={magicActive ? 'rgba(255,255,255,0.7)' : '#C7C7CC'}
-                            value={title} onChangeText={setTitle} onBlur={runMiniAI}
-                        />
-                        {magicActive && <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>AUTO-FILLED!</Text>}
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+                <ScrollView
+                    style={styles.formContainer}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                >
+                    {/* Category Selection */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Category</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+                            {CATEGORIES.map(item => (
+                                <TouchableOpacity
+                                    key={item.id}
+                                    style={[
+                                        styles.catCard,
+                                        category === item.id ? { backgroundColor: item.color, borderColor: item.color, elevation: 4 } : { borderColor: '#E5E5EA' }
+                                    ]}
+                                    onPress={() => setCategory(item.id)}
+                                >
+                                    <FontAwesome name={item.icon} size={20} color={category === item.id ? '#fff' : item.color} />
+                                    <Text style={[styles.catLabel, category === item.id && styles.catLabelActive]}>{item.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     </View>
 
-                    {/* Category Grid */}
-                    <Text style={[styles.label, { marginHorizontal: 20, marginBottom: 10 }]}>Category</Text>
-                    <View style={styles.catGrid}>
-                        {CATEGORIES.map(item => (
-                            <TouchableOpacity
-                                key={item.id}
-                                style={[
-                                    styles.catCard,
-                                    category === item.id ? { backgroundColor: item.color, borderColor: item.color, elevation: 5 } : { borderColor: '#E5E5EA' }
-                                ]}
-                                onPress={() => setCategory(item.id)}
-                            >
-                                <FontAwesome name={item.icon} size={24} color={category === item.id ? '#fff' : item.color} />
-                                <Text style={[styles.catLabel, category === item.id && styles.catLabelActive]}>{item.label}</Text>
-                            </TouchableOpacity>
-                        ))}
+                    {/* Image Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Images ({images.length}/5)</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageScroll}>
+                            {images.map((uri, index) => (
+                                <View key={index} style={styles.imageCard}>
+                                    <Image source={{ uri }} style={styles.imagePreview} />
+                                    <TouchableOpacity style={styles.removeImgBtn} onPress={() => setImages(images.filter((_, i) => i !== index))}>
+                                        <FontAwesome name="times" size={10} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                            {images.length < 5 && (
+                                <TouchableOpacity style={styles.imageCard} onPress={handleAddPhoto}>
+                                    <FontAwesome name="camera" size={24} color="#8E8E93" />
+                                    <Text style={styles.addImageText}>Add</Text>
+                                </TouchableOpacity>
+                            )}
+                        </ScrollView>
                     </View>
 
-                    {/* Photos */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, marginBottom: 25 }}>
-                        <TouchableOpacity style={styles.addPhotoBtn} onPress={handleAddPhoto}>
-                            <FontAwesome name="camera" size={24} color={Colors.light.primary} />
-                            <Text style={styles.addPhotoText}>Add</Text>
-                        </TouchableOpacity>
-                        {images.map((img, idx) => <Image key={idx} source={{ uri: img }} style={styles.thumbnail} />)}
-                    </ScrollView>
-
-                    {/* DYNAMIC FIELDS FORM */}
-                    <View style={styles.formSection}>
-                        <View style={styles.row}>
-                            <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
-                                <Text style={styles.label}>Price (€)</Text>
-                                <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="0.00" />
+                    {/* Main Info Card */}
+                    <View style={styles.card}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>Title</Text>
+                                <TextInput
+                                    style={[styles.input, magicActive && { borderColor: Colors.light.primary, borderWidth: 2 }]}
+                                    placeholder="e.g. Vintage Hoodie"
+                                    value={title}
+                                    onChangeText={setTitle}
+                                    onBlur={runMiniAI}
+                                />
                             </View>
-                            <View style={[styles.field, { flex: 1 }]}>
-                                <Text style={styles.label}>Qty</Text>
-                                <TextInput style={styles.input} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" placeholder="1" />
+                            {magicActive && <FontAwesome name="magic" size={20} color={Colors.light.primary} style={{ marginLeft: 10, marginTop: 15 }} />}
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={{ flex: 1, marginRight: 12 }}>
+                                <Text style={styles.inputLabel}>Price</Text>
+                                <View style={styles.priceInputContainer}>
+                                    <Text style={styles.currencySymbol}>€</Text>
+                                    <TextInput
+                                        style={styles.priceInput}
+                                        placeholder="0.00"
+                                        keyboardType="decimal-pad"
+                                        value={price}
+                                        onChangeText={setPrice}
+                                    />
+                                </View>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>Status</Text>
+                                <View style={styles.statusRow}>
+                                    {['Active', 'Draft'].map((s) => (
+                                        <Chip key={s} label={s} selected={status === s} onPress={() => setStatus(s as any)} />
+                                    ))}
+                                </View>
                             </View>
                         </View>
 
-                        {/* Fashion: Size, Brand, Material, Color */}
-                        {isFashion && (
-                            <>
-                                <View style={styles.row}>
-                                    <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
-                                        <Text style={styles.label}>Size</Text>
-                                        <TextInput style={styles.input} value={size} onChangeText={setSize} placeholder="M / 42" />
+                        <Text style={styles.inputLabel}>Description</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Describe what makes this item special..."
+                            multiline
+                            numberOfLines={4}
+                            value={description}
+                            onChangeText={setDescription}
+                        />
+                    </View>
+
+                    {/* Details Card */}
+                    {(isFashion || isTech || isGaming) && (
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Product Details</Text>
+
+                            {isFashion && (
+                                <View style={styles.detailRow}>
+                                    <View style={{ flex: 1, marginRight: 12 }}>
+                                        <Text style={styles.inputLabel}>Size</Text>
+                                        <TextInput style={styles.input} placeholder="e.g. M / 42" value={size} onChangeText={setSize} />
                                     </View>
-                                    <View style={[styles.field, { flex: 1 }]}>
-                                        <Text style={styles.label}>Brand</Text>
-                                        <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="Zara, Nike..." />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Condition</Text>
+                                        <TextInput style={styles.input} placeholder="New, Good..." value={condition} onChangeText={setCondition} />
                                     </View>
                                 </View>
-                                <View style={styles.field}><Text style={styles.label}>Material</Text><TextInput style={styles.input} value={material} onChangeText={setMaterial} placeholder="Cotton, Silk..." /></View>
-                            </>
-                        )}
+                            )}
 
-                        {/* Tech: Brand, Model, Specs */}
-                        {isTech && (
-                            <>
-                                <View style={styles.field}><Text style={styles.label}>Brand</Text><TextInput style={styles.input} value={brand} onChangeText={setBrand} /></View>
-                                <View style={styles.field}><Text style={styles.label}>Model</Text><TextInput style={styles.input} value={model} onChangeText={setModel} /></View>
-                                <View style={styles.field}><Text style={styles.label}>Specs</Text><TextInput style={styles.input} value={specs} onChangeText={setSpecs} placeholder="256GB, M1 Pro..." /></View>
-                            </>
-                        )}
+                            <Text style={styles.inputLabel}>Brand</Text>
+                            <TextInput style={[styles.input, { marginBottom: 15 }]} placeholder="Brand name" value={brand} onChangeText={setBrand} />
 
-                        {/* Games: Platform */}
-                        {isGaming && (
-                            <View style={styles.field}><Text style={styles.label}>Platform</Text><TextInput style={styles.input} value={platform} onChangeText={setPlatform} placeholder="PS5, Switch..." /></View>
-                        )}
-
-                        {/* Books: ISBN */}
-                        {isMedia && (
-                            <View style={styles.field}><Text style={styles.label}>ISBN</Text><TextInput style={styles.input} value={isbn} onChangeText={setIsbn} keyboardType="number-pad" /></View>
-                        )}
-
-                        {/* Color Picker (Visual) */}
-                        {(isFashion || category === 'Home' || category === 'Motors' || category === 'Electronics') && (
-                            <View style={styles.field}>
-                                <Text style={styles.label}>Color</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    {COLORS_PALETTE.map(c => (
-                                        <TouchableOpacity
-                                            key={c}
-                                            style={[styles.colorDot, { backgroundColor: c }, itemColor === c && styles.colorDotSelected]}
-                                            onPress={() => setItemColor(c)}
-                                        />
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {/* Condition Chips */}
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Condition</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                                {['New', 'Like New', 'Good', 'Fair', 'Damaged'].map(c => (
-                                    <Chip key={c} label={c} selected={condition === c} onPress={() => setCondition(c)} />
-                                ))}
-                            </ScrollView>
+                            {isTech && (
+                                <View style={styles.detailRow}>
+                                    <View style={{ flex: 1, marginRight: 12 }}>
+                                        <Text style={styles.inputLabel}>Model</Text>
+                                        <TextInput style={styles.input} placeholder="Model name" value={model} onChangeText={setModel} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Specs</Text>
+                                        <TextInput style={styles.input} placeholder="RAM, Storage..." value={specs} onChangeText={setSpecs} />
+                                    </View>
+                                </View>
+                            )}
                         </View>
+                    )}
 
-                        {/* Authentication / Extras (Switches) */}
-                        {isLuxury && (
-                            <View style={styles.card}>
-                                <Text style={[styles.label, { marginBottom: 10 }]}>EXTRAS</Text>
-                                <BooleanSwitch label="Original Box" value={hasBox} onValueChange={setHasBox} />
-                                <View style={styles.divider} />
-                                <BooleanSwitch label="Original Papers" value={hasPapers} onValueChange={setHasPapers} />
-                                <View style={styles.divider} />
-                                <BooleanSwitch label="Receipt" value={hasReceipt} onValueChange={setHasReceipt} />
+                    {/* Extras */}
+                    {(category === 'Collectibles' || isTech) && (
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Verification & Box</Text>
+                            <View style={styles.switchRow}>
+                                <Text style={styles.switchLabel}>Original Box</Text>
+                                <Switch value={hasBox} onValueChange={setHasBox} trackColor={{ false: '#D1D1D6', true: Colors.light.primary }} />
                             </View>
-                        )}
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Description</Text>
-                            <TextInput style={[styles.input, styles.textArea]} multiline value={description} onChangeText={setDescription} placeholder="Detailed description..." />
+                            <View style={styles.switchRow}>
+                                <Text style={styles.switchLabel}>Original Receipt</Text>
+                                <Switch value={hasReceipt} onValueChange={setHasReceipt} trackColor={{ false: '#D1D1D6', true: Colors.light.primary }} />
+                            </View>
                         </View>
-                    </View>
+                    )}
                 </ScrollView>
             </KeyboardAvoidingView>
 
             {/* Wizard Modal */}
-            <Modal visible={showPublishWizard} transparent animationType="fade">
+            <Modal visible={showPublishWizard} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <FontAwesome name="rocket" size={24} color={Colors.light.primary} />
-                            <Text style={styles.modalTitle}>Publish Item</Text>
+                            <View style={styles.rocketIconBox}>
+                                <FontAwesome name="rocket" size={24} color="#fff" />
+                            </View>
+                            <View>
+                                <Text style={styles.modalTitle}>Perfect! Item Saved.</Text>
+                                <Text style={styles.modalSubtitle}>Where do you want to list it first?</Text>
+                            </View>
                         </View>
-                        <Text style={styles.modalSubtitle}>Select a marketplace to auto-fill details:</Text>
 
-                        <ScrollView style={{ width: '100%', maxHeight: 300 }} contentContainerStyle={{ paddingVertical: 10 }}>
-                            {marketplaces.length === 0 ? (
-                                <Text style={{ textAlign: 'center', marginVertical: 20, color: '#8E8E93' }}>
-                                    No marketplaces enabled.{'\n'}Go to Profile to connect.
-                                </Text>
-                            ) : (
-                                marketplaces.map(m => {
-                                    const isConnected = connectedMarketplaces.includes(m.id);
-                                    return (
-                                        <View key={m.id} style={{ width: '100%', marginBottom: 8 }}>
-                                            <TouchableOpacity
-                                                style={styles.wizCard}
-                                                onPress={async () => {
-                                                    if (isConnected) {
-                                                        handlePublish(m.id);
-                                                    } else {
-                                                        const url = AuthService.getLoginUrl(m.id);
-                                                        if (url) {
-                                                            await AuthService.setPendingLogin(m.id);
-                                                            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true&source=publish`);
-                                                        }
-                                                    }
-                                                }}
-                                            >
-                                                <MarketplaceLogo
-                                                    id={m.id}
-                                                    style={styles.wizLogo}
-                                                />
-                                                {!isConnected && (
-                                                    <Text style={{ fontSize: 12, color: '#FF9500', marginLeft: 8, flex: 1 }}>Login Required</Text>
-                                                )}
-                                                <FontAwesome name={isConnected ? "chevron-right" : "sign-in"} size={14} color={isConnected ? "#C7C7CC" : "#007AFF"} />
-                                            </TouchableOpacity>
+                        <ScrollView style={{ width: '100%', maxHeight: 350 }}>
+                            {marketplaces.map(m => {
+                                const isConnected = connectedMarketplaces.includes(m.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={m.id}
+                                        style={styles.wizCard}
+                                        onPress={() => handlePublish(m.id)}
+                                    >
+                                        <MarketplaceLogo id={m.id} style={styles.wizLogo} />
+                                        <View style={{ flex: 1, marginLeft: 12 }}>
+                                            <Text style={styles.wizMarketTitle}>{m.name}</Text>
+                                            <Text style={styles.wizMarketStatus}>{isConnected ? 'Connected' : 'Login required'}</Text>
                                         </View>
-                                    );
-                                })
-                            )}
+                                        <FontAwesome name={isConnected ? "magic" : "sign-in"} size={18} color={isConnected ? Colors.light.primary : "#8E8E93"} />
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </ScrollView>
 
-                        <TouchableOpacity style={styles.secondaryBtn} onPress={() => { setShowPublishWizard(false); router.back(); }}>
-                            <Text style={styles.secondaryBtnText}>Close</Text>
+                        <TouchableOpacity style={styles.closeBtn} onPress={() => { setShowPublishWizard(false); router.back(); }}>
+                            <Text style={styles.closeBtnText}>I'll publish later</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -452,45 +390,81 @@ export default function NewItemScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F2F2F7' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingBottom: 15, paddingHorizontal: 20, backgroundColor: '#fff' },
-    headerTitle: { fontSize: 17, fontWeight: '600' },
-    saveText: { fontSize: 17, fontWeight: '600', color: Colors.light.primary },
-    scrollContent: { paddingBottom: 100 },
-    magicContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 20, padding: 15, borderRadius: 12, shadowOpacity: 0.05 },
-    magicActive: { backgroundColor: Colors.light.primary, transform: [{ scale: 1.02 }] },
-    catGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, marginBottom: 20 },
-    catCard: { width: '30%', aspectRatio: 1, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E5EA' }, // removed shadow
-    catLabel: { fontSize: 11, marginTop: 8, color: '#333', fontWeight: '600' },
+    container: { flex: 1, backgroundColor: '#F8F9FB' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7'
+    },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F2F2F7', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
+    saveBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
+    saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    formContainer: { flex: 1 },
+    section: { marginVertical: 15, paddingHorizontal: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E', marginBottom: 12 },
+    categoryScroll: { gap: 12, paddingRight: 20 },
+    catCard: {
+        width: 85,
+        height: 85,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 8
+    },
+    catLabel: { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 6, textAlign: 'center' },
     catLabelActive: { color: '#fff' },
-    addPhotoBtn: { width: 90, height: 90, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E5EA', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-    addPhotoText: { fontSize: 11, color: Colors.light.primary, marginTop: 4 },
-    thumbnail: { width: 90, height: 90, borderRadius: 12, marginRight: 10, backgroundColor: '#eee' },
-    formSection: { paddingHorizontal: 20 },
-    row: { flexDirection: 'row', marginBottom: 15 },
-    field: { marginBottom: 15 },
-    label: { fontSize: 13, color: '#8E8E93', marginBottom: 6, fontWeight: '600', marginLeft: 4 },
-    input: { backgroundColor: '#fff', padding: 14, borderRadius: 12, fontSize: 16, borderWidth: 1, borderColor: '#E5E5EA' },
-    textArea: { height: 100, textAlignVertical: 'top' },
-    chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E5EA', marginRight: 8 },
+    imageScroll: { gap: 12, paddingRight: 20 },
+    imageCard: {
+        width: 100,
+        height: 100,
+        borderRadius: 16,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#E5E5EA',
+        borderStyle: 'dashed',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden'
+    },
+    imagePreview: { width: '100%', height: '100%' },
+    removeImgBtn: { position: 'absolute', top: 5, right: 5, backgroundColor: 'rgba(255,59,48,0.8)', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
+    addImageText: { fontSize: 12, color: '#8E8E93', marginTop: 4, fontWeight: '600' },
+    card: { backgroundColor: '#fff', marginHorizontal: 20, borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 2 },
+    inputLabel: { fontSize: 13, fontWeight: '600', color: '#8E8E93', marginBottom: 8, marginLeft: 4 },
+    input: { backgroundColor: '#F2F2F7', borderRadius: 14, padding: 14, fontSize: 16, color: '#1C1C1E', marginBottom: 15 },
+    textArea: { height: 120, textAlignVertical: 'top' },
+    row: { flexDirection: 'row', marginBottom: 10 },
+    priceInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F2F2F7', borderRadius: 14, paddingHorizontal: 15 },
+    currencySymbol: { fontSize: 18, fontWeight: '700', color: Colors.light.success, marginRight: 5 },
+    priceInput: { flex: 1, paddingVertical: 14, fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
+    statusRow: { flexDirection: 'row', gap: 8 },
+    chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F2F2F7', borderWidth: 1, borderColor: '#E5E5EA' },
     chipSelected: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
-    chipText: { fontSize: 14, color: '#3A3A3C' },
-    chipTextSelected: { color: '#fff', fontWeight: 'bold' },
-    card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20 },
-    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-    switchLabel: { fontSize: 16, fontWeight: '500' },
-    divider: { height: 1, backgroundColor: '#E5E5EA', marginVertical: 10 },
-    colorDot: { width: 40, height: 40, borderRadius: 20, marginRight: 12, borderWidth: 1, borderColor: '#E5E5EA' },
-    colorDotSelected: { borderWidth: 3, borderColor: Colors.light.primary },
+    chipText: { fontSize: 13, fontWeight: '600', color: '#8E8E93' },
+    chipTextSelected: { color: '#fff' },
+    detailRow: { flexDirection: 'row' },
+    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
+    switchLabel: { fontSize: 16, fontWeight: '500', color: '#1C1C1E' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { width: '85%', backgroundColor: '#fff', borderRadius: 24, padding: 24, paddingBottom: 16, maxHeight: '80%', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 5 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 },
-    modalTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', color: '#1C1C1E' },
-    modalSubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', marginBottom: 20 },
-    wizCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', paddingVertical: 16, paddingHorizontal: 20, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E5EA' },
-    wizLogo: { width: 120, height: 40 },
-    secondaryBtn: { paddingVertical: 12, marginTop: 4, alignSelf: 'center' },
-    secondaryBtnText: { color: '#8E8E93', fontWeight: '600', fontSize: 15 },
-    primaryBtn: { backgroundColor: Colors.light.primary, paddingVertical: 15, paddingHorizontal: 40, borderRadius: 16 }
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, gap: 15 },
+    rocketIconBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center' },
+    modalTitle: { fontSize: 20, fontWeight: '800', color: '#1C1C1E' },
+    modalSubtitle: { fontSize: 14, color: '#8E8E93' },
+    wizCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 16, borderRadius: 20, marginBottom: 12 },
+    wizLogo: { width: 80, height: 24 },
+    wizMarketTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
+    wizMarketStatus: { fontSize: 12, color: '#8E8E93', marginTop: 2 },
+    closeBtn: { marginTop: 15, alignSelf: 'center', padding: 10 },
+    closeBtnText: { color: '#8E8E93', fontWeight: '600', fontSize: 15 },
 });

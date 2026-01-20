@@ -74,10 +74,22 @@ export default function InventoryScreen() {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#E5F9FF' }]} onPress={() => router.push({ pathname: '/new-item', params: { id: item.id, openWizard: 'true' } })}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#F2F2F7' }]}
+            onPress={() => router.push({ pathname: '/new-item', params: { id: item.id } })}
+          >
+            <FontAwesome name="pencil" size={14} color="#8E8E93" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#E5F9FF' }]}
+            onPress={() => router.push({ pathname: '/new-item', params: { id: item.id, openWizard: 'true' } })}
+          >
             <FontAwesome name="rocket" size={14} color="#007AFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FFF0F0' }]} onPress={() => handleDelete(item.id)}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#FFF0F0' }]}
+            onPress={() => handleDelete(item.id)}
+          >
             <FontAwesome name="trash" size={14} color="#FF3B30" />
           </TouchableOpacity>
         </View>
@@ -164,11 +176,16 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 12,
-    marginBottom: 15,
+    marginBottom: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   itemImage: {
     width: 60,

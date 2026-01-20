@@ -5,8 +5,8 @@ import { InventoryItem, StorageService } from '@/services/storage';
 import { SCRIPTS } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebView from 'react-native-webview';
 
@@ -41,9 +41,11 @@ export default function BrowserScreen() {
     };
 
     // 1. Initial Load: Filter Marketplaces
-    useEffect(() => {
-        loadMarketplaces();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadMarketplaces();
+        }, [])
+    );
 
     const loadMarketplaces = async () => {
         try {
