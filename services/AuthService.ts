@@ -1,6 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as WebBrowser from 'expo-web-browser';
-import { Alert } from 'react-native';
 
 // Marketplace configuration
 export interface MarketplaceConfig {
@@ -14,31 +12,31 @@ export const MARKETPLACES: MarketplaceConfig[] = [
     {
         id: 'vinted',
         name: 'Vinted',
-        loginUrl: 'https://www.vinted.it/member/general/login',
+        loginUrl: 'https://www.vinted.it/',
         color: '#09B1BA',
     },
     {
         id: 'ebay',
         name: 'eBay',
-        loginUrl: 'https://signin.ebay.it/ws/eBayISAPI.dll',
+        loginUrl: 'https://www.ebay.it/',
         color: '#E53238',
     },
     {
         id: 'subito',
         name: 'Subito',
-        loginUrl: 'https://login.subito.it/',
+        loginUrl: 'https://www.subito.it/',
         color: '#FF5F5F',
     },
     {
         id: 'depop',
         name: 'Depop',
-        loginUrl: 'https://www.depop.com/login/',
+        loginUrl: 'https://www.depop.com/',
         color: '#000000',
     },
     {
         id: 'wallapop',
         name: 'Wallapop',
-        loginUrl: 'https://es.wallapop.com/app/login',
+        loginUrl: 'https://es.wallapop.com/',
         color: '#13C1AC',
     },
 ];
@@ -47,54 +45,44 @@ const STORAGE_KEY = 'marketplace_connections';
 
 export class AuthService {
     /**
-     * Open native browser for marketplace login
+     * Get login URL for a marketplace
      */
-    static async openLogin(marketplaceId: string): Promise<boolean> {
+    static getLoginUrl(marketplaceId: string): string | null {
         const marketplace = MARKETPLACES.find(m => m.id === marketplaceId);
-        if (!marketplace) {
-            Alert.alert('Error', 'Marketplace not found');
-            return false;
-        }
+        return marketplace?.loginUrl || null;
+    }
 
+    /**
+     * Mark login as pending (for tracking in browser)
+     */
+    static async setPendingLogin(marketplaceId: string): Promise<void> {
         try {
-            // Open native browser (Safari/Chrome Custom Tabs)
-            const result = await WebBrowser.openAuthSessionAsync(
-                marketplace.loginUrl,
-                undefined,
-                {
-                    showInRecents: true,
-                }
-            );
-
-            if (result.type === 'success') {
-                // Mark as connected
-                await this.markAsConnected(marketplaceId);
-
-                Alert.alert(
-                    '✅ Login Completed',
-                    `You've successfully logged into ${marketplace.name}. The session is now active.`,
-                    [{ text: 'OK' }]
-                );
-                return true;
-            } else if (result.type === 'cancel') {
-                Alert.alert(
-                    'Login Cancelled',
-                    `You can connect ${marketplace.name} later from the Profile tab.`,
-                    [{ text: 'OK' }]
-                );
-                return false;
-            }
+            await AsyncStorage.setItem('pending_login', marketplaceId);
         } catch (error) {
-            console.error('Login error:', error);
-            Alert.alert(
-                'Login Error',
-                'There was an error opening the login page. Please try again.',
-                [{ text: 'OK' }]
-            );
-            return false;
+            console.error('Error setting pending login:', error);
         }
+    }
 
-        return false;
+    /**
+     * Get pending login marketplace
+     */
+    static async getPendingLogin(): Promise<string | null> {
+        try {
+            return await AsyncStorage.getItem('pending_login');
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Clear pending login
+     */
+    static async clearPendingLogin(): Promise<void> {
+        try {
+            await AsyncStorage.removeItem('pending_login');
+        } catch (error) {
+            console.error('Error clearing pending login:', error);
+        }
     }
 
     /**

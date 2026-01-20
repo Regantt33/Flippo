@@ -409,7 +409,17 @@ export default function NewItemScreen() {
                                         <View key={m.id} style={{ width: '100%', marginBottom: 8 }}>
                                             <TouchableOpacity
                                                 style={styles.wizCard}
-                                                onPress={() => isConnected ? handlePublish(m.id) : AuthService.openLogin(m.id).then(loadConnectedMarketplaces)}
+                                                onPress={async () => {
+                                                    if (isConnected) {
+                                                        handlePublish(m.id);
+                                                    } else {
+                                                        const url = AuthService.getLoginUrl(m.id);
+                                                        if (url) {
+                                                            await AuthService.setPendingLogin(m.id);
+                                                            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+                                                        }
+                                                    }
+                                                }}
                                             >
                                                 <MarketplaceLogo
                                                     id={m.id}

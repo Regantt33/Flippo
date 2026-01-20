@@ -1,11 +1,10 @@
-
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Switch, TextInput, TouchableOpacity } from 'react-native';
 
@@ -37,8 +36,11 @@ export default function ProfileScreen() {
     };
 
     const handleLogin = async (marketplaceId: string) => {
-        await AuthService.openLogin(marketplaceId);
-        await loadData(); // Refresh connection status
+        const url = AuthService.getLoginUrl(marketplaceId);
+        if (url) {
+            await AuthService.setPendingLogin(marketplaceId);
+            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+        }
     };
 
     const handleSaveProfile = async () => {

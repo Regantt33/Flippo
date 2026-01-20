@@ -35,9 +35,13 @@ export default function OnboardingScreen() {
         else router.replace('/loading'); // Finish onboarding
     };
 
-    // Use centralized AuthService for login
+    // Navigate to browser for login
     const openLogin = async (marketplaceId: string) => {
-        await AuthService.openLogin(marketplaceId);
+        const url = AuthService.getLoginUrl(marketplaceId);
+        if (url) {
+            await AuthService.setPendingLogin(marketplaceId);
+            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+        }
     };
 
     const StepIndicator = () => (
