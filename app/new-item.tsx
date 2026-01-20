@@ -416,7 +416,7 @@ export default function NewItemScreen() {
                                                         const url = AuthService.getLoginUrl(m.id);
                                                         if (url) {
                                                             await AuthService.setPendingLogin(m.id);
-                                                            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+                                                            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true&source=publish`);
                                                         }
                                                     }
                                                 }}

@@ -1,8 +1,7 @@
-
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
@@ -12,9 +11,11 @@ import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { AuthService, MARKETPLACES } from '@/services/AuthService';
 
 export default function OnboardingScreen() {
-    const router = useRouter();
-    const [step, setStep] = useState(1);
+    const params = useLocalSearchParams();
+    const initialStep = params.step ? parseInt(params.step as string, 10) : 1;
+    const [step, setStep] = useState(initialStep);
     const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
 
     // Animation Values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -40,7 +41,7 @@ export default function OnboardingScreen() {
         const url = AuthService.getLoginUrl(marketplaceId);
         if (url) {
             await AuthService.setPendingLogin(marketplaceId);
-            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true&source=onboarding`);
         }
     };
 

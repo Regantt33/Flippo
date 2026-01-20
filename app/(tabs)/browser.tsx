@@ -3,7 +3,7 @@ import { AuthService } from '@/services/AuthService';
 import { StorageService } from '@/services/storage';
 import { SCRIPTS } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebView from 'react-native-webview';
@@ -11,8 +11,10 @@ import WebView from 'react-native-webview';
 export default function BrowserScreen() {
     const params = useLocalSearchParams();
     const router = useRouter();
+    const navigation = useNavigation();
     const [currentTab, setCurrentTab] = useState<'vinted' | 'ebay' | 'subito'>('vinted');
     const [isLoginMode, setIsLoginMode] = useState(false);
+    const [loginSource, setLoginSource] = useState<'onboarding' | 'profile' | 'publish' | null>(null);
     const [pendingMarketplace, setPendingMarketplace] = useState<string | null>(null);
     const [loginDetected, setLoginDetected] = useState(false);
 
@@ -28,10 +30,18 @@ export default function BrowserScreen() {
 
     const webViewRef = useRef<WebView>(null);
 
+    // Hide tab bar when in login mode
+    useEffect(() => {
+        navigation.setOptions({
+            tabBarStyle: { display: isLoginMode ? 'none' : 'flex' }
+        });
+    }, [isLoginMode, navigation]);
+
     useEffect(() => {
         // Check for login mode from params
         if (params.login === 'true' && params.url) {
             setIsLoginMode(true);
+            setLoginSource((params.source as any) || 'onboarding');
             setCurrentUrl(decodeURIComponent(params.url as string));
         } else if (params.platform && params.autoFillMode === 'true') {
             const platform = params.platform as keyof typeof urls;
@@ -80,26 +90,35 @@ export default function BrowserScreen() {
         webViewRef.current?.injectJavaScript(SCRIPTS.AUTO_COMPILE(item));
     };
 
-    // Detect if login is complete based on URL
+    // Detect if login is complete based on URL (improved precision)
     const detectLoginComplete = (url: string): boolean => {
         if (!pendingMarketplace) return false;
 
         const lowerUrl = url.toLowerCase();
 
-        // Vinted: if we're on catalog/feed/profile pages = logged in
+        // Vinted: Multiple success indicators
         if (pendingMarketplace === 'vinted') {
-            return lowerUrl.includes('vinted.it') &&
-                (lowerUrl.includes('/catalog') || lowerUrl.includes('/member') || lowerUrl.includes('/items'));
+            // Se siamo su queste pagine, l'user è loggato
+            const successPages = ['/catalog', '/member/settings', '/items/', '/inbox', '/my/items'];
+            const isSuccessPage = successPages.some(page => lowerUrl.includes(page));
+            // Deve essere su vinted.it E su una pagina di successo E NON sulla pagina di login
+            return lowerUrl.includes('vinted.it') && isSuccessPage && !lowerUrl.includes('/login') && !lowerUrl.includes('/auth');
         }
 
-        // eBay: if we're past signin page = logged in
+        // eBay: More precise detection
         if (pendingMarketplace === 'ebay') {
-            return lowerUrl.includes('ebay.it') && !lowerUrl.includes('/signin') && !lowerUrl.includes('/ws/ebayisapi');
+            // Se vediamo queste pagine = login ok
+            const successPages = ['/myb/', '/mye/', '/sh/'];
+            const isSuccessPage = successPages.some(page => lowerUrl.includes(page));
+            return lowerUrl.includes('ebay.it') && (isSuccessPage || (!lowerUrl.includes('/signin') && !lowerUrl.includes('/ws/ebayisapi')));
         }
 
-        // Subito: if we're on main site without login page = logged in
+        // Subito: Better detection
         if (pendingMarketplace === 'subito') {
-            return lowerUrl.includes('subito.it') && !lowerUrl.includes('/login');
+            // Pagine che indicano login
+            const successIndicators = ['/mysubito', '/account', '/inserisci'];
+            const hasSuccess = successIndicators.some(ind => lowerUrl.includes(ind));
+            return lowerUrl.includes('subito.it') && (hasSuccess || !lowerUrl.includes('/login'));
         }
 
         return false;
@@ -114,18 +133,37 @@ export default function BrowserScreen() {
 
         const marketplace = AuthService.getMarketplace(pendingMarketplace);
 
+        // Determine where to return based on login source
+        const returnButton = loginSource === 'onboarding'
+            ? 'Back to Setup'
+            : loginSource === 'profile'
+                ? 'Back to Profile'
+                : 'Continue';
+
         Alert.alert(
             '✅ Login Completed!',
-            `You're now logged into ${marketplace?.name || pendingMarketplace}. You can continue browsing or return to the app.`,
+            `You're now logged into ${marketplace?.name || pendingMarketplace}.`,
             [
-                { text: 'Continue Browsing', style: 'cancel' },
-                { text: 'Return to App', onPress: () => router.back() }
+                {
+                    text: returnButton,
+                    onPress: () => {
+                        // Return to the source page
+                        if (loginSource === 'onboarding') {
+                            router.replace('/onboarding?step=2');
+                        } else if (loginSource === 'profile') {
+                            router.push('/(tabs)/profile');
+                        } else {
+                            router.back();
+                        }
+                    }
+                }
             ]
         );
 
         setLoginDetected(true);
         setIsLoginMode(false);
         setPendingMarketplace(null);
+        setLoginSource(null);
     };
 
     // Manual confirmation of login
@@ -200,13 +238,18 @@ export default function BrowserScreen() {
                 )}
             />
 
+            {/* Login Mode Overlay - Subtle visual effect */}
+            {isLoginMode && (
+                <View style={styles.loginOverlay} pointerEvents="none" />
+            )}
+
             {/* Login Mode Banner */}
             {isLoginMode && pendingMarketplace && (
                 <View style={styles.loginBanner}>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.loginBannerTitle}>🔐 Login Mode</Text>
                         <Text style={styles.loginBannerText}>
-                            Log in to {AuthService.getMarketplace(pendingMarketplace)?.name || pendingMarketplace}.
+                            Log in to {AuthService.getMarketplace(pendingMarketplace)?.name || pendingMarketplace}.{' '}
                             I'll detect when you're done, or tap "Done" below.
                         </Text>
                     </View>
@@ -214,17 +257,21 @@ export default function BrowserScreen() {
                         style={styles.loginConfirmBtn}
                         onPress={handleManualConfirm}
                     >
-                        <Text style={styles.loginConfirmText}>✓ I'm Logged In</Text>
+                        <FontAwesome name="check" size={18} color="#fff" />
+                        <Text style={styles.loginConfirmText}>Done</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
-            <View style={styles.floatingBar}>
-                <TouchableOpacity style={styles.turbofillBtn} onPress={injectAutoCompile}>
-                    <FontAwesome name="magic" size={20} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.turbofillText}>Auto-Compile</Text>
-                </TouchableOpacity>
-            </View>
+            {/* Floating Auto-Compile Button - Hidden in login mode */}
+            {!isLoginMode && (
+                <View style={styles.floatingBar}>
+                    <TouchableOpacity style={styles.turbofillBtn} onPress={injectAutoCompile}>
+                        <FontAwesome name="magic" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.turbofillText}>Auto-Compile</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -298,50 +345,62 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
-    loginBanner: {
+    loginOverlay: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 215, 0, 0.05)',
+        pointerEvents: 'none',
+    },
+    loginBanner: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: '#FFF9E6',
-        borderBottomWidth: 2,
-        borderBottomColor: '#FFD700',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        borderTopWidth: 3,
+        borderTopColor: '#FFD700',
+        paddingHorizontal: 20,
+        paddingVertical: 18,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 16,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 8,
     },
     loginBannerTitle: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '700',
         color: '#000',
-        marginBottom: 4,
+        marginBottom: 6,
     },
     loginBannerText: {
-        fontSize: 12,
+        fontSize: 13,
         color: '#666',
-        lineHeight: 16,
+        lineHeight: 18,
     },
     loginConfirmBtn: {
         backgroundColor: '#34C759',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.25,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 4,
     },
     loginConfirmText: {
         color: '#fff',
         fontWeight: '700',
-        fontSize: 13,
+        fontSize: 14,
     },
 });

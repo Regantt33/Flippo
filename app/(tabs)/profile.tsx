@@ -39,7 +39,7 @@ export default function ProfileScreen() {
         const url = AuthService.getLoginUrl(marketplaceId);
         if (url) {
             await AuthService.setPendingLogin(marketplaceId);
-            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true`);
+            router.push(`/(tabs)/browser?url=${encodeURIComponent(url)}&login=true&source=profile`);
         }
     };
 
