@@ -4,15 +4,14 @@ import { Image, ImageStyle, StyleProp, StyleSheet, Text, View } from 'react-nati
 // Local assets for reliable loading
 const MARKETPLACE_LOGOS: Record<string, any> = {
     'vinted': require('../assets/logos/vinted.png'),
+    'ebay': require('../assets/logos/ebay.png'),
     'subito': require('../assets/logos/subito.png'),
     'depop': require('../assets/logos/depop.png'),
     'wallapop': require('../assets/logos/wallapop.png'),
 };
 
-// Fallback URLs for logos not available locally
-const MARKETPLACE_LOGO_URLS: Record<string, string> = {
-    'ebay': 'https://logo.clearbit.com/ebay.com',
-};
+// Fallback URLs for logos not available locally (none needed now)
+const MARKETPLACE_LOGO_URLS: Record<string, string> = {};
 
 interface Props {
     id: string;
