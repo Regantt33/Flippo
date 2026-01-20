@@ -1,6 +1,7 @@
 
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
+import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import { InventoryCategory, StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
