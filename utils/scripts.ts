@@ -15,7 +15,7 @@ export const SCRIPTS = {
   `,
 
     // Fills a generic form with Item Data and Images
-    AUTO_COMPILE: (item: { title: string; price: string; description: string; images?: string[] }) => `
+    AUTO_COMPILE: (item: { title: string; price: string; description: string; category?: string; images?: string[] }) => `
     (async function() {
       try {
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -81,9 +81,60 @@ export const SCRIPTS = {
             el.blur();
         }
 
+        async function fillCategory(category) {
+            console.log('Filling category:', category);
+            // Vinted: Select category
+            if (window.location.host.includes('vinted')) {
+                try {
+                    const selector = document.querySelector('[name="catalog_id"], .catalog-select, [aria-label*="categoria"], [aria-label*="category"]');
+                    if (selector) {
+                        selector.click();
+                        await sleep(500);
+                        // Try to find an input in the overlay
+                        const searchInput = document.querySelector('.dropdown-content input, .v-select__search');
+                        if (searchInput) {
+                            await fill(searchInput, category);
+                            await sleep(500);
+                            const firstResult = document.querySelector('.dropdown-content li, .v-select__option');
+                            if (firstResult) firstResult.click();
+                        }
+                    }
+                } catch (e) {}
+            }
+            // eBay: Category suggest
+            if (window.location.host.includes('ebay')) {
+                try {
+                    const searchBox = document.querySelector('#category-search-box, [aria-label*="category"]');
+                    if (searchBox) {
+                        await fill(searchBox, category);
+                        await sleep(800);
+                        const suggest = document.querySelector('.category-suggestion, .suggest-item');
+                        if (suggest) suggest.click();
+                    }
+                } catch (e) {}
+            }
+            // Subito: Category tree
+            if (window.location.host.includes('subito')) {
+                try {
+                    const catBtn = document.querySelector('[name="category"], .category-selector');
+                    if (catBtn) {
+                        catBtn.click();
+                        await sleep(500);
+                        // Try to find text match in lists
+                        const items = Array.from(document.querySelectorAll('li, span')).filter(el => el.innerText.includes(category));
+                        if (items.length > 0) items[0].click();
+                    }
+                } catch (e) {}
+            }
+        }
+
         async function fillAllText() {
             console.log('Filling text fields...');
             
+            // 0. Category
+            await fillCategory(${JSON.stringify(item.category)});
+            await sleep(200);
+
             // 1. Find Title
             try {
                 const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];

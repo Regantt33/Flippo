@@ -3,8 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type InventoryCategory =
     | 'Fashion' | 'Women' | 'Men' | 'Kids'
-    | 'Electronics' | 'Videogames'
-    | 'Home' | 'Entertainment'
+    | 'Shoes' | 'Bags' | 'Accessories'
+    | 'Electronics' | 'Small Tech' | 'Videogames'
+    | 'Home' | 'Entertainment' | 'Beauty'
     | 'Sports' | 'Collectibles'
     | 'Pets' | 'Motors' | 'Other';
 

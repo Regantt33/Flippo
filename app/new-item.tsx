@@ -13,11 +13,16 @@ import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleS
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 
 const CATEGORIES: { id: InventoryCategory; label: string; icon: any; color: string }[] = [
-    { id: 'Electronics', label: 'Tech', icon: 'laptop', color: '#34C759' },
+    { id: 'Fashion', label: 'Clothes', icon: 'shopping-bag', color: '#FF2D55' },
+    { id: 'Shoes', label: 'Shoes', icon: 'step-forward', color: '#5856D6' },
+    { id: 'Bags', label: 'Bags', icon: 'shopping-basket', color: '#AF52DE' },
+    { id: 'Accessories', label: 'Accessories', icon: 'magic', color: '#FF9500' },
+    { id: 'Electronics', label: 'Electronics', icon: 'laptop', color: '#007AFF' },
+    { id: 'Small Tech', label: 'Small Tech', icon: 'mobile', color: '#32ADE6' },
     { id: 'Videogames', label: 'Games', icon: 'gamepad', color: '#5856D6' },
-    { id: 'Fashion', label: 'Fashion', icon: 'shopping-bag', color: '#FF2D55' }, // Consolidated Category
-    { id: 'Home', label: 'Home', icon: 'home', color: '#AF52DE' },
+    { id: 'Home', label: 'Home', icon: 'home', color: '#34C759' },
     { id: 'Entertainment', label: 'Media', icon: 'music', color: '#FF3B30' },
+    { id: 'Beauty', label: 'Beauty', icon: 'flask', color: '#FF2D55' },
     { id: 'Sports', label: 'Sports', icon: 'futbol-o', color: '#00C7BE' },
     { id: 'Collectibles', label: 'Collectibles', icon: 'diamond', color: '#FFCC00' },
     { id: 'Motors', label: 'Motors', icon: 'car', color: '#8E8E93' },
@@ -223,11 +228,11 @@ export default function NewItemScreen() {
     };
 
     // Helpers
-    const isFashion = ['Fashion', 'Women', 'Men', 'Kids'].includes(category); // Keep old keys for backward comp
-    const isTech = ['Electronics'].includes(category);
+    const isFashion = ['Fashion', 'Women', 'Men', 'Kids', 'Shoes', 'Bags', 'Accessories'].includes(category);
+    const isTech = ['Electronics', 'Small Tech'].includes(category);
     const isGaming = ['Videogames'].includes(category);
     const isMedia = ['Entertainment'].includes(category);
-    const isLuxury = ['Collectibles', 'Electronics', 'Fashion'].includes(category);
+    const isLuxury = ['Collectibles', 'Electronics', 'Fashion', 'Shoes', 'Bags'].includes(category);
 
     const Chip = ({ label, selected, onPress }: { label: string, selected: boolean, onPress: () => void }) => (
         <TouchableOpacity style={[styles.chip, selected && styles.chipSelected]} onPress={onPress}>
