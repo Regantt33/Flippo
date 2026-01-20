@@ -1,11 +1,12 @@
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
-import { StorageService } from '@/services/storage';
+import { InventoryItem, StorageService } from '@/services/storage';
 import { SCRIPTS } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 export default function BrowserScreen() {
@@ -18,6 +19,11 @@ export default function BrowserScreen() {
     const [pendingMarketplace, setPendingMarketplace] = useState<string | null>(null);
     const [loginDetected, setLoginDetected] = useState(false);
 
+    // Inventory selection state
+    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+    const [showItemPicker, setShowItemPicker] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
     // URL configurations
     const urls = {
         vinted: { home: 'https://www.vinted.it', sell: 'https://www.vinted.it/items/new' },
@@ -26,7 +32,7 @@ export default function BrowserScreen() {
     };
 
     // Determine initial URL based on params
-    const [currentUrl, setCurrentUrl] = useState(urls.vinted.home);
+    const [currentUrl, setCurrentUrl] = useState(urls.vinted.sell);
 
     const webViewRef = useRef<WebView>(null);
 
@@ -68,14 +74,12 @@ export default function BrowserScreen() {
         } catch (e) { }
     };
 
-    const injectAutoCompile = async () => {
-        let item: any = {
-            title: "Nike Air Jordan 1",
-            price: "100",
-            description: "Descrizione di prova"
-        };
+    const injectAutoCompile = async (selectedItem?: InventoryItem) => {
+        let item: any = null;
 
-        if (params.itemId) {
+        if (selectedItem) {
+            item = selectedItem;
+        } else if (params.itemId) {
             const stored = await StorageService.getItems();
             const found = stored.find(i => i.id === params.itemId);
             if (found) item = found;
@@ -83,11 +87,55 @@ export default function BrowserScreen() {
             item = {
                 title: params.title as string,
                 price: params.price as string,
-                description: params.description as string
+                description: params.description as string,
+                images: []
             };
         }
 
-        webViewRef.current?.injectJavaScript(SCRIPTS.AUTO_COMPILE(item));
+        if (!item) {
+            // No item selected, show picker
+            const items = await StorageService.getItems();
+            setInventoryItems(items);
+            setShowItemPicker(true);
+            return;
+        }
+
+        setIsProcessing(true);
+        setShowItemPicker(false);
+
+        // Wait for modal to close fully to avoid UI bridge congestion/crashes
+        setTimeout(async () => {
+            try {
+                // Prepare images: read local URIs as Base64 for WebView injection
+                const base64Images = [];
+                if (item.images && item.images.length > 0) {
+                    for (const imgUri of item.images) {
+                        try {
+                            const base64 = await FileSystem.readAsStringAsync(imgUri, {
+                                encoding: 'base64',
+                            });
+                            base64Images.push(`data:image/jpeg;base64,${base64}`);
+                        } catch (err) {
+                            console.error('Error reading image:', imgUri, err);
+                        }
+                    }
+                }
+
+                const compileData = {
+                    title: item.title,
+                    price: item.price,
+                    description: item.description,
+                    images: base64Images.slice(0, 5) // Limit to 5 images to prevent bridge crashes
+                };
+
+                webViewRef.current?.injectJavaScript(SCRIPTS.AUTO_COMPILE(compileData));
+            } catch (error) {
+                console.error('Auto-compile error:', error);
+                Alert.alert('Error', 'Failed to prepare data for auto-fill.');
+            } finally {
+                setIsProcessing(false);
+            }
+        }, 300);
     };
 
     // Detect if login is complete based on URL (improved precision)
@@ -192,7 +240,7 @@ export default function BrowserScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer}>
                     <TouchableOpacity
                         style={[styles.tab, currentTab === 'vinted' && styles.activeTab]}
-                        onPress={() => { setCurrentTab('vinted'); setCurrentUrl(urls.vinted.home); }}
+                        onPress={() => { setCurrentTab('vinted'); setCurrentUrl(urls.vinted.sell); }}
                     >
                         <FontAwesome name="shopping-bag" size={14} color={currentTab === 'vinted' ? Colors.light.success : '#8E8E93'} />
                         <Text style={[styles.tabText, currentTab === 'vinted' && styles.activeTabText]}>Vinted</Text>
@@ -200,7 +248,7 @@ export default function BrowserScreen() {
 
                     <TouchableOpacity
                         style={[styles.tab, currentTab === 'ebay' && styles.activeTab]}
-                        onPress={() => { setCurrentTab('ebay'); setCurrentUrl(urls.ebay.home); }}
+                        onPress={() => { setCurrentTab('ebay'); setCurrentUrl(urls.ebay.sell); }}
                     >
                         <FontAwesome name="gavel" size={14} color={currentTab === 'ebay' ? Colors.light.secondary : '#8E8E93'} />
                         <Text style={[styles.tabText, currentTab === 'ebay' && styles.activeTabText]}>eBay</Text>
@@ -208,7 +256,7 @@ export default function BrowserScreen() {
 
                     <TouchableOpacity
                         style={[styles.tab, currentTab === 'subito' && styles.activeTab]}
-                        onPress={() => { setCurrentTab('subito'); setCurrentUrl(urls.subito.home); }}
+                        onPress={() => { setCurrentTab('subito'); setCurrentUrl(urls.subito.sell); }}
                     >
                         <FontAwesome name="bell" size={14} color={currentTab === 'subito' ? '#FF3B30' : '#8E8E93'} />
                         <Text style={[styles.tabText, currentTab === 'subito' && styles.activeTabText]}>Subito</Text>
@@ -266,12 +314,74 @@ export default function BrowserScreen() {
             {/* Floating Auto-Compile Button - Hidden in login mode */}
             {!isLoginMode && (
                 <View style={styles.floatingBar}>
-                    <TouchableOpacity style={styles.turbofillBtn} onPress={injectAutoCompile}>
-                        <FontAwesome name="magic" size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.turbofillText}>Auto-Compile</Text>
+                    <TouchableOpacity
+                        style={[styles.turbofillBtn, isProcessing && { opacity: 0.7 }]}
+                        onPress={() => injectAutoCompile()}
+                        disabled={isProcessing}
+                    >
+                        <FontAwesome name={isProcessing ? "spinner" : "magic"} size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.turbofillText}>{isProcessing ? "Filling..." : "Auto-Fill"}</Text>
                     </TouchableOpacity>
                 </View>
             )}
+
+            {/* Item Selection Modal */}
+            <Modal
+                visible={showItemPicker}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowItemPicker(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.pickerContainer}>
+                        <View style={styles.pickerHeader}>
+                            <Text style={styles.pickerTitle}>Select Item to List</Text>
+                            <TouchableOpacity onPress={() => setShowItemPicker(false)}>
+                                <FontAwesome name="times" size={20} color="#8E8E93" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <FlatList
+                            data={inventoryItems}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.itemCard}
+                                    onPress={() => injectAutoCompile(item)}
+                                >
+                                    <View style={styles.itemThumbnailContainer}>
+                                        {item.images && item.images.length > 0 && item.images[0] ? (
+                                            <Image
+                                                source={{ uri: item.images[0] }}
+                                                style={styles.itemThumbnail}
+                                            />
+                                        ) : (
+                                            <FontAwesome name="image" size={20} color="#C7C7CC" />
+                                        )}
+                                    </View>
+                                    <View style={styles.itemInfo}>
+                                        <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+                                        <Text style={styles.itemPrice}>€{item.price}</Text>
+                                    </View>
+                                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={() => (
+                                <View style={styles.emptyContainer}>
+                                    <Text style={styles.emptyText}>No items found in inventory.</Text>
+                                    <TouchableOpacity
+                                        style={styles.createBtn}
+                                        onPress={() => { setShowItemPicker(false); router.push('/new-item'); }}
+                                    >
+                                        <Text style={styles.createBtnText}>Create New Item</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            contentContainerStyle={{ padding: 16 }}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -326,6 +436,30 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         alignSelf: 'center',
+        flexDirection: 'row',
+        gap: 12,
+        alignItems: 'center',
+    },
+    sellShortcutBtn: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 30,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        alignItems: 'center',
+        gap: 8,
+        borderWidth: 1,
+        borderColor: Colors.light.primary,
+    },
+    sellShortcutText: {
+        color: Colors.light.primary,
+        fontWeight: '700',
+        fontSize: 14,
     },
     turbofillBtn: {
         flexDirection: 'row',
@@ -402,5 +536,85 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '700',
         fontSize: 14,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    pickerContainer: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        height: '70%',
+    },
+    pickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F2F2F7',
+    },
+    pickerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    itemCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FAFAFA',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    itemThumbnailContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        backgroundColor: '#E5E5EA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    itemThumbnail: {
+        width: '100%',
+        height: '100%',
+    },
+    tabAction: {
+        padding: 4,
+        marginLeft: 4,
+    },
+    itemInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    itemTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#000',
+    },
+    itemPrice: {
+        fontSize: 13,
+        color: Colors.light.success,
+        marginTop: 2,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        color: '#8E8E93',
+        marginBottom: 16,
+    },
+    createBtn: {
+        backgroundColor: Colors.light.primary,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    createBtnText: {
+        color: '#fff',
+        fontWeight: '600',
     },
 });

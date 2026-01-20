@@ -14,68 +14,168 @@ export const SCRIPTS = {
     })();
   `,
 
-  // Fills a generic form with Item Data
-  AUTO_COMPILE: (item: { title: string; price: string; description: string }) => `
-    (function() {
-      // "Smart Heuristic" Engine: No AI, just fuzzy logic matching
-      function findBestInput(keywords, type = 'input') {
-          const candidates = Array.from(document.querySelectorAll(type));
-          let bestMatch = null;
-          let maxScore = 0;
+  // Fills a generic form with Item Data and Images
+  AUTO_COMPILE: (item: { title: string; price: string; description: string; images?: string[] }) => `
+    (async function() {
+      try {
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-          candidates.forEach(el => {
-              if (el.offsetParent === null) return; // Skip hidden
-              if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio') return;
+        // "Smart Heuristic" Engine: No AI, just fuzzy logic matching
+        function findBestInput(keywords, type = 'input') {
+            const candidates = Array.from(document.querySelectorAll(type));
+            let bestMatch = null;
+            let maxScore = 0;
 
-              let score = 0;
-              const attr = (el.id + ' ' + el.name + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label')||'')).toLowerCase();
-              
-              keywords.forEach(kw => {
-                  if (attr.includes(kw)) score += 5;
-                  if (attr === kw) score += 10;
-              });
+            candidates.forEach(el => {
+                if (el.offsetParent === null) return; // Skip hidden
+                if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio') return;
 
-              // Bonus for standard attributes
-              if (type === 'textarea' && attr.includes('desc')) score += 5;
-              if (type === 'input' && attr.includes('price')) score += 5;
+                let score = 0;
+                const attr = (el.id + ' ' + el.name + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label')||'')).toLowerCase();
+                
+                keywords.forEach(kw => {
+                    if (attr.includes(kw)) score += 5;
+                    if (attr === kw) score += 10;
+                });
 
-              if (score > maxScore) {
-                  maxScore = score;
-                  bestMatch = el;
-              }
-          });
-          return bestMatch;
+                // Bonus for standard attributes
+                if (type === 'textarea' && attr.includes('desc')) score += 5;
+                if (type === 'input' && attr.includes('price')) score += 5;
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatch = el;
+                }
+            });
+            return bestMatch;
+        }
+
+        async function fill(el, value) {
+            if (!el) return;
+            el.focus();
+            await sleep(50);
+            el.value = value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            await sleep(50);
+            el.blur();
+        }
+
+        console.log('Starting Flippo Auto-Fill...');
+
+        // 1. Find Title
+        try {
+            const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];
+            const titleInput = findBestInput(titleKw, 'input');
+            if (titleInput) {
+                await fill(titleInput, ${JSON.stringify(item.title)});
+                console.log('Title filled');
+            }
+        } catch (e) { console.error('Title fill failed', e); }
+
+        await sleep(200);
+
+        // 2. Find Price
+        try {
+            const priceKeywords = ['price', 'prezzo', 'euro', 'amount', 'cifra'];
+            const priceInput = findBestInput(priceKeywords, 'input');
+            if (priceInput) {
+                await fill(priceInput, ${JSON.stringify(item.price)});
+                console.log('Price filled');
+            }
+        } catch (e) { console.error('Price fill failed', e); }
+
+        await sleep(200);
+
+        // 3. Find Description
+        try {
+            const descKw = ['desc', 'body', 'testo', 'info', 'text', 'storia'];
+            const descInput = findBestInput(descKw, 'textarea'); 
+            if (descInput) {
+                await fill(descInput, ${JSON.stringify(item.description)});
+                console.log('Description filled');
+            }
+        } catch (e) { console.error('Description fill failed', e); }
+
+        await sleep(500);
+
+        // 4. Image Injection (Experimental Drag & Drop Simulation)
+        const images = ${JSON.stringify(item.images || [])};
+        if (images && images.length > 0) {
+            try {
+                // Find drop zones
+                const dropZoneSelectors = [
+                    '.drag-drop__input', // Vinted
+                    'input[type="file"]', // Generic
+                    '.upload-zone', 
+                    '.uploader',
+                    '.image-upload-container',
+                    '[aria-label*="upload"]',
+                    '[aria-label*="carica"]',
+                    '#photos-upload',
+                    '[data-testid="file-input"]'
+                ];
+                
+                let target = null;
+                for (const sel of dropZoneSelectors) {
+                    target = document.querySelector(sel);
+                    if (target) {
+                        console.log('Found drop zone:', sel);
+                        break;
+                    }
+                }
+
+                if (target) {
+                    // Convert Base64 to Blobs/Files
+                    const files = await Promise.all(images.map(async (b64, i) => {
+                        try {
+                            const res = await fetch(b64);
+                            const blob = await res.blob();
+                            return new File([blob], 'image_' + i + '.jpg', { type: 'image/jpeg' });
+                        } catch (e) {
+                            console.error('Blob conversion failed', i, e);
+                            return null;
+                        }
+                    }));
+
+                    const validFiles = files.filter(f => f !== null);
+
+                    // Create DataTransfer
+                    const dataTransfer = new DataTransfer();
+                    validFiles.forEach(file => dataTransfer.items.add(file));
+
+                    // Trigger drop event
+                    const dropEvent = new DragEvent('drop', {
+                        bubbles: true,
+                        cancelable: true,
+                        dataTransfer: dataTransfer
+                    });
+                    
+                    if (target.tagName === 'INPUT' && target.type === 'file') {
+                        Object.defineProperty(target, 'files', {
+                            value: dataTransfer.files,
+                            writable: false
+                        });
+                        target.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else {
+                        target.dispatchEvent(dropEvent);
+                    }
+                    console.log('Images injected successfully');
+                } else {
+                    console.warn('No drop zone found for images');
+                }
+            } catch (e) {
+                console.error('Image injection internal error:', e);
+            }
+        }
+
+        const msg = '✅ Auto-Fill Process Completed';
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
+        alert(msg);
+      } catch (globalError) {
+        console.error('Global injection error:', globalError);
+        alert('Injection Error: ' + globalError.message);
       }
-
-      function fill(el, value) {
-          if (!el) return;
-          el.focus();
-          el.value = value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          el.blur();
-      }
-
-      // 1. Find Title
-      const titleKw = ['title', 'titolo', 'subject', 'nome', 'name', 'what', 'cosa', 'vendo', 'oggetto'];
-      const titleInput = findBestInput(titleKw, 'input');
-      if (titleInput) fill(titleInput, '${item.title}');
-
-      // 2. Find Price
-      // Often numeric input, or text with currency placeholder
-      const priceKw = ['price', 'prezzo', 'euro', 'amount', 'cifra'];
-      const priceInput = findBestInput(priceKw, 'input');
-      if (priceInput) fill(priceInput, '${item.price}');
-
-      // 3. Find Description
-      const descKw = ['desc', 'body', 'testo', 'info', 'text', 'storia'];
-      const descInput = findBestInput(descKw, 'textarea'); 
-      // Fallback to div[contenteditable] if complex editor (future upgrade)
-      if (descInput) fill(descInput, '${item.description.replace(/\n/g, '\\n')}');
-
-      const msg = titleInput ? '✅ Auto-Filled via Smart Logic' : '⚠️ Could not auto-detect fields';
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
-      alert(msg);
     })();
   `,
 
