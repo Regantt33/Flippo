@@ -98,8 +98,12 @@ export default function OnboardingScreen() {
     const WelcomeStep = () => (
         <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
             <View style={styles.heroImageContainer}>
-                <View style={styles.blob} />
-                <FontAwesome name="rocket" size={80} color="#1C1C1E" />
+                {/* Blob removed as requested */}
+                <Image
+                    source={require('@/assets/images/selly-logo.png')}
+                    style={{ width: 120, height: 120 }}
+                    resizeMode="contain"
+                />
             </View>
             <Text style={styles.title}>Vendi Ovunque,{"\n"}Senza Sforzo.</Text>
             <Text style={styles.subtitle}>Selly automatizza le tue vendite sui principali marketplace di moda e tech.</Text>
@@ -217,7 +221,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    container: { flex: 1, backgroundColor: '#FEFBF8' },
     header: { paddingTop: 60, alignItems: 'center' },
     content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center' },
 

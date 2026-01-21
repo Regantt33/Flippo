@@ -154,7 +154,7 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#FEFBF8' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
 
   itemCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FEFBF8',
     borderRadius: 24,
     padding: 12,
     marginBottom: 16,

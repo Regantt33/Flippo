@@ -208,7 +208,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    container: { flex: 1, backgroundColor: '#FEFBF8' },
     header: {
         paddingTop: 60,
         paddingBottom: 20,
@@ -234,9 +234,9 @@ const styles = StyleSheet.create({
         padding: 24,
         borderRadius: 32,
     },
-    profileCardEditing: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: Colors.light.primary + '30' },
+    profileCardEditing: { backgroundColor: '#FEFBF8', borderWidth: 1, borderColor: Colors.light.primary + '30' },
     avatarContainer: { marginRight: 20, position: 'relative' },
-    avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+    avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: '#FEFBF8', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     avatarImage: { width: '100%', height: '100%' },
     cameraBadge: { position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     input: { backgroundColor: '#F2F2F7', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
 
     sectionHeader: { marginHorizontal: 28, marginTop: 32, marginBottom: 12, fontSize: 11, fontWeight: '800', color: '#C7C7CC', letterSpacing: 1 },
-    section: { backgroundColor: '#FFFFFF', marginHorizontal: 24, borderRadius: 28, borderWidth: 1, borderColor: '#F2F2F7', overflow: 'hidden' },
+    section: { backgroundColor: '#FEFBF8', marginHorizontal: 24, borderRadius: 28, borderWidth: 1, borderColor: '#F2F2F7', overflow: 'hidden' },
 
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
     rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },

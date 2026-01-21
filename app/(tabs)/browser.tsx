@@ -62,7 +62,7 @@ export default function BrowserScreen() {
         } else {
             navigation.setOptions({
                 tabBarStyle: {
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: '#FEFBF8',
                     borderTopColor: '#F2F2F7',
                 },
             });
@@ -424,7 +424,7 @@ export default function BrowserScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    container: { flex: 1, backgroundColor: '#FEFBF8' },
 
     hubHeader: { paddingHorizontal: 24, paddingTop: 60, marginBottom: 32 },
     hubTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     settingsBtn: { marginTop: 24, backgroundColor: '#1C1C1E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16 },
     settingsBtnText: { color: '#fff', fontWeight: '800' },
 
-    browserHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
+    browserHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: '#FEFBF8', borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
     switcherScroll: { gap: 8, paddingRight: 40 },
     switchChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F8F9FB', minWidth: 40, alignItems: 'center', justifyContent: 'center' },
     switchChipActive: { backgroundColor: '#1C1C1E' },
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     webview: { flex: 1 },
 
     overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 101 },
-    statusCard: { backgroundColor: '#FFFFFF', padding: 32, borderRadius: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 10 },
+    statusCard: { backgroundColor: '#FEFBF8', padding: 32, borderRadius: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 10 },
     statusText: { fontSize: 17, fontWeight: '900', color: '#1C1C1E', marginTop: 20, marginBottom: 16 },
     progressBar: { width: 220, height: 8, backgroundColor: '#F2F2F7', borderRadius: 4, overflow: 'hidden' },
     progressFill: { height: '100%', backgroundColor: Colors.light.primary },

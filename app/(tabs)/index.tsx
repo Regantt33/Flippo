@@ -90,8 +90,14 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcomeText}>Ciao, {profile?.name || 'Utente Selly'} 👋</Text>
-            <Text style={styles.pageTitle}>Action Center</Text>
+            <Image
+              source={require('@/assets/images/selly-logo.png')}
+              style={{ width: 40, height: 40, marginBottom: 8 }}
+              resizeMode="contain"
+            // tintColor="#1C1C1E" // Optional: if logo is black, no need. If it's multi-color, keep original.
+            />
+            <Text style={styles.welcomeText}>BENTORNATA,</Text>
+            <Text style={styles.pageTitle}>{profile?.name}</Text>
           </View>
           <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
             {profile?.avatar ? (
@@ -183,7 +189,7 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: '#FEFBF8' },
   scrollContent: { paddingHorizontal: 24, paddingTop: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
   welcomeText: { fontSize: 13, fontWeight: '700', color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
   filterTextActive: { color: '#FFFFFF' },
 
   feedContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FEFBF8',
     borderRadius: 28,
     borderWidth: 1,
     borderColor: '#F2F2F7',

@@ -10,7 +10,9 @@ export const SCRIPTS = {
       // Simulation: Try to find common badge elements
       const badge = document.querySelector('.badge-count, .notification-bubble, [aria-label*="notif"]');
       const count = badge ? parseInt(badge.innerText, 10) : 0;
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'NOTIFICATION_UPDATE', count: count || 0 }));
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'NOTIFICATION_UPDATE', count: count || 0 }));
+      }
     })();
   `,
 

@@ -10,8 +10,9 @@ const flippoOrange = '#FF9500'; // Apple System Orange
 export const Colors = {
   light: {
     text: '#000000',
-    background: '#F2F2F7', // Apple System Grouped Background
-    surface: '#FFFFFF',
+    // Updated to Cream Theme
+    background: '#FEFBF8', // The new "White" (Uniform Cream)
+    surface: '#FEFBF8', // The new "White"
     surfaceHighlight: '#E5E5EA',
     primary: flippoBlue,
     secondary: flippoOrange,

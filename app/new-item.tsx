@@ -386,7 +386,7 @@ export default function NewItemScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    container: { flex: 1, backgroundColor: '#FEFBF8' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     categoryLabel: { fontSize: 14, fontWeight: '700', color: '#1C1C1E', marginLeft: 10 },
     categoryLabelActive: { color: '#fff' },
 
-    card: { backgroundColor: '#FFFFFF', paddingHorizontal: 24, marginBottom: 32 },
+    card: { backgroundColor: '#FEFBF8', paddingHorizontal: 24, marginBottom: 32 },
     inputLabel: { fontSize: 12, fontWeight: '800', color: '#C7C7CC', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 },
     input: { backgroundColor: '#F8F9FB', borderRadius: 16, padding: 18, fontSize: 16, fontWeight: '600', color: '#1C1C1E', marginBottom: 16 },
     inputMagic: { borderColor: Colors.light.primary, borderWidth: 1, backgroundColor: Colors.light.primary + '05' },
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     switchText: { fontSize: 16, fontWeight: '600', color: '#8E8E93' },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-    wizardContent: { backgroundColor: '#FFFFFF', borderRadius: 32, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30 },
+    wizardContent: { backgroundColor: '#FEFBF8', borderRadius: 32, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30 },
     wizardHeader: { alignItems: 'center', marginBottom: 32 },
     wizardIndicator: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#F2F2F7', marginBottom: 24 },
     wizardTitle: { fontSize: 24, fontWeight: '900', color: '#1C1C1E', marginBottom: 8 },

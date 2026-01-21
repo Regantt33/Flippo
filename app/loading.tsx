@@ -48,14 +48,14 @@ export default function LoadingSyncScreen() {
         await new Promise(r => setTimeout(r, 500));
 
         // Navigate to Dashboard
-        router.replace('/(tabs)/');
+        router.replace('/(tabs)');
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
                 <Image
-                    source={require('@/assets/images/logo.png')}
+                    source={require('@/assets/images/selly-logo.png')}
                     style={styles.logo}
                     resizeMode="contain"
                 />
@@ -94,7 +94,7 @@ export default function LoadingSyncScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#FEFBF8',
         justifyContent: 'center',
         alignItems: 'center',
     },
