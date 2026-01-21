@@ -7,7 +7,7 @@ import { SCRIPTS } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -54,20 +54,9 @@ export default function BrowserScreen() {
     const navigation = useNavigation();
     const isFromOnboarding = params.source === 'onboarding';
 
-    useLayoutEffect(() => {
-        if (isFromOnboarding && url) {
-            navigation.setOptions({
-                tabBarStyle: { display: 'none' },
-            });
-        } else {
-            navigation.setOptions({
-                tabBarStyle: {
-                    backgroundColor: '#FEFBF8',
-                    borderTopColor: '#F2F2F7',
-                },
-            });
-        }
-    }, [navigation, isFromOnboarding, url]);
+    // REMOVED useLayoutEffect that was modifying tabBarStyle. 
+    // This often causes layout loops/freezes.
+    // We will handle specific styling later if needed.
 
     useFocusEffect(useCallback(() => {
         const init = async () => {
@@ -182,7 +171,8 @@ export default function BrowserScreen() {
     const handleSelectItem = (id: string) => {
         setSelectedItemId(id);
         setShowInventorySheet(false);
-        // Briefly wait for sheet to close then trigger autocompile if logic allows
+        // Trigger compilation immediately after selection with a slight delay for modal close
+        setTimeout(() => injectAutoCompile(id), 500);
     };
 
     useEffect(() => {
@@ -243,62 +233,53 @@ export default function BrowserScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Quick Switcher Bar / Onboarding Header */}
+            {/* Quick Switcher Bar / Onboarding Header - COMPACT */}
             <View style={styles.browserHeader}>
                 {isFromOnboarding ? (
                     <View style={styles.onboardingHeader}>
                         <PremiumButton style={styles.backBtn} onPress={() => router.replace('/onboarding?step=3')}>
-                            <FontAwesome name="chevron-left" size={14} color="#1C1C1E" />
-                            <Text style={styles.backBtnText}>Torna alla lista</Text>
+                            <FontAwesome name="chevron-left" size={16} color="#007AFF" />
+                            <Text style={styles.backText}>Indietro</Text>
                         </PremiumButton>
-                        <Text style={styles.onboardingTitle}>Login Marketplace</Text>
-                        <View style={{ width: 80 }} />
+                        <Text style={styles.onboardingTitle}>Collega {currentSite?.toUpperCase()}</Text>
+                        <View style={{ width: 60 }} />
                     </View>
                 ) : (
-                    <>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcherScroll}>
-                            <PremiumButton style={[styles.switchChip, !currentSite && styles.switchChipActive]} onPress={() => setUrl('')}>
-                                <FontAwesome name="th-large" size={14} color={!currentSite ? "#fff" : "#8E8E93"} />
-                            </PremiumButton>
+                    <View style={styles.switcherScroll}>
+                        <PremiumButton style={styles.homeBtn} onPress={() => setUrl('')}>
+                            <FontAwesome name="th-large" size={16} color="#1C1C1E" />
+                        </PremiumButton>
+
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
                             {marketplaces.map(m => (
                                 <PremiumButton
                                     key={m.id}
-                                    style={[styles.switchChip, currentSite === m.id && styles.switchChipActive]}
+                                    style={[styles.switcherChip, currentSite === m.id && styles.switcherChipActive]}
                                     onPress={() => handleMarketSelection(m)}
                                 >
-                                    <Text style={[styles.switchText, currentSite === m.id && styles.switchTextActive]}>{m.name}</Text>
+                                    <Text style={[styles.switcherText, currentSite === m.id && styles.switcherTextActive]}>
+                                        {m.name}
+                                    </Text>
                                 </PremiumButton>
                             ))}
                         </ScrollView>
-                        <PremiumButton style={styles.refreshBtn} onPress={() => webViewRef.current?.reload()}>
-                            <FontAwesome name="refresh" size={14} color="#C7C7CC" />
-                        </PremiumButton>
-                    </>
+                    </View>
                 )}
             </View>
 
-            {/* Login Mode Banner */}
-            {currentSite && !isConnected && !isLoading && (
-                <View style={styles.loginBanner}>
-                    <View style={styles.loginBannerContent}>
-                        <View style={styles.loginBannerHeader}>
-                            <FontAwesome name="info-circle" size={16} color="#8C5A00" />
-                            <Text style={styles.loginBannerTitle}>Automation restricted</Text>
-                        </View>
-                        <Text style={styles.loginBannerSubtitle}>
-                            Sign in to {marketplaces.find(m => m.id === currentSite)?.name || 'the marketplace'} to enable Selly tools. Once done, we'll detect it automatically.
-                        </Text>
-                    </View>
-                    <View style={styles.loginBannerActions}>
-                        <PremiumButton style={styles.loginBannerBtn} onPress={handleLoginMode}>
-                            <Text style={styles.loginBtnText}>Go to Login</Text>
-                        </PremiumButton>
-                        <PremiumButton style={styles.manualConnectBtn} onPress={handleManualConnection}>
-                            <Text style={styles.manualConnectBtnText}>Logged in?</Text>
-                        </PremiumButton>
-                    </View>
+            {/* Browser Control Bar - COMPACT */}
+            <View style={styles.controlBar}>
+                <View style={[styles.statusIndicator, isConnected ? styles.statusConnected : styles.statusPending]}>
+                    <View style={styles.statusDot} />
+                    <Text style={styles.statusText}>{isConnected ? 'Pronto' : 'Login richiesto'}</Text>
                 </View>
-            )}
+
+                {!isConnected && (
+                    <PremiumButton style={styles.loginAction} onPress={handleLoginMode}>
+                        <Text style={styles.loginActionText}>Login</Text>
+                    </PremiumButton>
+                )}
+            </View>
 
             <WebView
                 ref={webViewRef}
@@ -309,8 +290,7 @@ export default function BrowserScreen() {
                 onNavigationStateChange={(navState) => {
                     setCanGoBack(navState.canGoBack);
                     extractSiteFromUrl(navState.url);
-
-                    // Login Detection Logic
+                    // Login check kept but hidden for brevity in this replace block
                     const checkLogin = async () => {
                         const pendingId = await AuthService.getPendingLogin();
                         if (pendingId) {
@@ -338,167 +318,145 @@ export default function BrowserScreen() {
                     };
                     checkLogin();
                 }}
-                onMessage={(event) => {
-                    try {
-                        const data = JSON.parse(event.nativeEvent.data);
-                        if (data.type === 'LOG') console.log('[WebView Log]', data.message);
-                    } catch (e) { }
-                }}
             />
 
             {/* Automation Progress HUD */}
             {isCompiling && (
-                <View style={styles.overlay}>
-                    <View style={styles.statusCard}>
-                        <ActivityIndicator color={Colors.light.primary} />
-                        <Text style={styles.statusText}>Inserimento Dati In Corso...</Text>
-                        <View style={styles.progressBar}>
-                            <View style={[styles.progressFill, { width: `${compileProgress * 100}%` }]} />
-                        </View>
+                <View style={styles.compileHud}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text style={styles.compileText}>Compilazione in corso...</Text>
+                    <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${compileProgress * 100}%` }]} />
                     </View>
                 </View>
             )}
 
-            {/* UI Actions Overlay */}
+            {/* REFINED FLOATING ACTIONS */}
             <View style={styles.actionsOverlay}>
                 {canGoBack && (
-                    <PremiumButton style={styles.actionFab} onPress={() => webViewRef.current?.goBack()}>
-                        <FontAwesome name="chevron-left" size={16} color="#fff" />
+                    <PremiumButton style={[styles.actionFab, styles.secondaryFab]} onPress={() => {
+                        if (webViewRef.current) webViewRef.current.goBack();
+                    }}>
+                        <FontAwesome name="arrow-left" size={16} color="#FFF" />
                     </PremiumButton>
                 )}
 
-                {/* AUTOCOMPILE BUTTON - Magic Sparkles */}
-                {isConnected && !isFromOnboarding && (
-                    <View style={{ flexDirection: 'row', gap: 12 }}>
-                        <PremiumButton style={[styles.actionFab, styles.secondaryFab]} onPress={() => setShowInventorySheet(true)}>
-                            <FontAwesome name="list-ul" size={16} color="#fff" />
-                        </PremiumButton>
-                        <PremiumButton
-                            style={[styles.actionFab, styles.compileFab, !selectedItemId && { backgroundColor: '#C7C7CC' }]}
-                            onPress={() => selectedItemId ? injectAutoCompile() : setShowInventorySheet(true)}
-                        >
-                            <FontAwesome name="magic" size={20} color="#fff" />
-                            <Text style={styles.compileFabText}>
-                                {selectedItemId ? 'Compila' : 'Seleziona Oggetto'}
-                            </Text>
-                        </PremiumButton>
-                    </View>
+                {/* Spacer if no back button to keep Vendi Qui centered or right aligned */}
+                {!canGoBack && <View style={{ width: 44 }} />}
+
+                {currentSite && (
+                    <PremiumButton style={styles.compileFab} onPress={() => setShowInventorySheet(true)}>
+                        <FontAwesome name="magic" size={16} color="#FFF" style={{ marginRight: 8 }} />
+                        <Text style={styles.compileBtnText}>Vendi Qui</Text>
+                    </PremiumButton>
                 )}
+
+                {/* Removed Manual Link Button as requested */}
+                <View style={{ width: 44 }} />
             </View>
 
-            {/* Inventory Selection Modal */}
-            <Modal visible={showInventorySheet} animationType="slide" transparent={true} onRequestClose={() => setShowInventorySheet(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.sheet}>
-                        <View style={styles.sheetHeader}>
-                            <Text style={styles.sheetTitle}>Seleziona Oggetto</Text>
-                            <PremiumButton style={styles.closeBtn} onPress={() => setShowInventorySheet(false)}>
-                                <FontAwesome name="close" size={16} color="#8E8E93" />
+            {/* INVENTORY SHEET MODAL */}
+            <Modal
+                visible={showInventorySheet}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowInventorySheet(false)}
+            >
+                <Pressable style={styles.modalOverlay} onPress={() => setShowInventorySheet(false)}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Scegli Articolo</Text>
+                            <PremiumButton onPress={() => setShowInventorySheet(false)}>
+                                <FontAwesome name="close" size={24} color="#8E8E93" />
                             </PremiumButton>
                         </View>
-                        <ScrollView contentContainerStyle={styles.sheetContent}>
-                            {inventory.length === 0 ? (
-                                <Text style={styles.emptyText}>Inventario vuoto</Text>
-                            ) : (
-                                inventory.map(item => (
-                                    <PremiumButton
-                                        key={item.id}
-                                        style={[styles.itemRow, selectedItemId === item.id && styles.itemRowActive]}
-                                        onPress={() => handleSelectItem(item.id)}
-                                    >
-                                        <Image source={{ uri: item.images[0] }} style={styles.itemThumb} />
-                                        <View style={styles.itemInfo}>
-                                            <Text style={styles.itemName} numberOfLines={1}>{item.title}</Text>
-                                            <Text style={styles.itemPrice}>€{item.price}</Text>
-                                        </View>
-                                        {selectedItemId === item.id && <FontAwesome name="check-circle" size={20} color={Colors.light.primary} />}
-                                    </PremiumButton>
-                                ))
-                            )}
+                        <ScrollView contentContainerStyle={styles.inventoryList}>
+                            {inventory.filter(i => i.status === 'Draft' || i.status === 'Active').map(item => (
+                                <PremiumButton key={item.id} style={styles.inventoryItem} onPress={() => handleSelectItem(item.id)}>
+                                    <Image source={{ uri: item.images[0] }} style={styles.itemThumb} />
+                                    <View style={styles.itemMeta}>
+                                        <Text style={styles.itemName} numberOfLines={1}>{item.title}</Text>
+                                        <Text style={styles.itemPrice}>€{item.price}</Text>
+                                    </View>
+                                    <FontAwesome name="chevron-right" size={14} color="#C7C7CC" />
+                                </PremiumButton>
+                            ))}
                         </ScrollView>
                     </View>
-                </View>
+                </Pressable>
             </Modal>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FEFBF8' },
+    container: { flex: 1, backgroundColor: '#FEFBF8', paddingBottom: 50 }, // Reduced padding as TabBar is standard
 
     hubHeader: { paddingHorizontal: 24, paddingTop: 60, marginBottom: 32 },
     hubTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
-    hubSubtitle: { fontSize: 15, color: '#8E8E93', fontWeight: '500', marginTop: 4 },
-    hubGrid: { paddingHorizontal: 24, gap: 16, paddingBottom: 100 },
-    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24 },
-    marketLogo: { width: 48, height: 48, borderRadius: 8 },
-    marketInfo: { flex: 1, marginLeft: 16 },
-    marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
-    marketBadge: { backgroundColor: '#34C75915', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginTop: 4 },
-    marketBadgeText: { fontSize: 10, fontWeight: '900', color: '#34C759', letterSpacing: 0.5 },
-    marketBadgeError: { backgroundColor: '#FF950015' },
-    marketBadgeTextError: { color: '#FF9500' },
-    emptyHub: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
-    emptyText: { fontSize: 14, color: '#8E8E93', marginTop: 16, fontWeight: '600', textAlign: 'center' },
-    settingsBtn: { marginTop: 24, backgroundColor: '#1C1C1E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16 },
-    settingsBtnText: { color: '#fff', fontWeight: '800' },
+    hubSubtitle: { fontSize: 16, color: '#8E8E93', fontWeight: '500', marginTop: 4 },
 
-    browserHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: '#FEFBF8', borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
-    switcherScroll: { gap: 8, paddingRight: 40 },
-    switchChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F8F9FB', minWidth: 40, alignItems: 'center', justifyContent: 'center' },
-    switchChipActive: { backgroundColor: '#1C1C1E' },
-    switchText: { fontSize: 13, fontWeight: '800', color: '#8E8E93' },
-    switchTextActive: { color: '#FFFFFF' },
-    refreshBtn: { width: 40, height: 40, marginLeft: 8, justifyContent: 'center', alignItems: 'center' },
+    hubGrid: { paddingHorizontal: 24, paddingBottom: 40 },
+    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 20, borderRadius: 20, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, borderWidth: 1, borderColor: '#F2F2F7' },
+    marketLogo: { width: 48, height: 48, borderRadius: 12, marginRight: 16 },
+    marketInfo: { flex: 1 },
+    marketName: { fontSize: 18, fontWeight: '800', color: '#1C1C1E' },
+    marketBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: '#34C75920', marginTop: 4 },
+    marketBadgeError: { backgroundColor: '#FF3B3020' },
+    marketBadgeText: { fontSize: 10, fontWeight: '700', color: '#34C759' },
+    marketBadgeTextError: { color: '#FF3B30' },
 
-    loginBanner: {
-        backgroundColor: '#FFF9F2',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#FF950020',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-    },
-    loginBannerContent: { flex: 1, marginRight: 12 },
-    loginBannerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-    loginBannerTitle: { fontSize: 13, fontWeight: '900', color: '#8C5A00', textTransform: 'uppercase', letterSpacing: 0.5 },
-    loginBannerSubtitle: { fontSize: 13, color: '#8C5A00', fontWeight: '500', lineHeight: 18 },
-    loginBannerActions: { flexDirection: 'row', gap: 8 },
-    loginBannerBtn: { backgroundColor: '#FF9500', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-    loginBtnText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-    manualConnectBtn: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FF9500', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-    manualConnectBtnText: { color: '#FF9500', fontSize: 12, fontWeight: '800' },
+    emptyHub: { alignItems: 'center', marginTop: 60 },
+    emptyText: { marginTop: 16, fontSize: 16, color: '#8E8E93', fontWeight: '500', marginBottom: 24 },
+    settingsBtn: { backgroundColor: '#007AFF', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+    settingsBtnText: { color: '#FFF', fontWeight: '700' },
 
-    webview: { flex: 1 },
+    // Compact Browser Styles
+    browserHeader: { backgroundColor: '#FEFBF8', borderBottomWidth: 1, borderBottomColor: '#F2F2F7', paddingTop: 40 }, // Reduced top padding
+    onboardingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
+    backBtn: { flexDirection: 'row', alignItems: 'center', padding: 8 },
+    backText: { color: '#007AFF', fontSize: 16, fontWeight: '600', marginLeft: 4 },
+    onboardingTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
 
-    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 101 },
-    statusCard: { backgroundColor: '#FEFBF8', padding: 32, borderRadius: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 10 },
-    statusText: { fontSize: 17, fontWeight: '900', color: '#1C1C1E', marginTop: 20, marginBottom: 16 },
-    progressBar: { width: 220, height: 8, backgroundColor: '#F2F2F7', borderRadius: 4, overflow: 'hidden' },
+    switcherScroll: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8, alignItems: 'center' },
+    homeBtn: { padding: 8, backgroundColor: '#F2F2F7', borderRadius: 10, marginRight: 8 },
+    switcherChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: '#F2F2F7' },
+    switcherChipActive: { backgroundColor: '#1C1C1E' },
+    switcherText: { fontSize: 13, fontWeight: '600', color: '#8E8E93' },
+    switcherTextActive: { color: '#FFF' },
+
+    controlBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
+    statusIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#34C75915', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    statusPending: { backgroundColor: '#FF950015' },
+    statusConnected: { backgroundColor: '#34C75915' },
+    statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#34C759', marginRight: 5 },
+    statusText: { fontSize: 11, fontWeight: '600', color: '#34C759' },
+    loginAction: { backgroundColor: '#007AFF', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+    loginActionText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+
+    webview: { flex: 1, backgroundColor: '#FEFBF8' },
+
+    compileHud: { position: 'absolute', top: '40%', left: '15%', right: '15%', padding: 20, backgroundColor: 'rgba(28,28,30,0.95)', borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 },
+    compileText: { marginTop: 12, color: '#FFF', fontSize: 14, fontWeight: '600', marginBottom: 12 },
+    progressBar: { width: 180, height: 6, backgroundColor: '#F2F2F7', borderRadius: 3, overflow: 'hidden' },
     progressFill: { height: '100%', backgroundColor: Colors.light.primary },
 
-    actionsOverlay: { position: 'absolute', bottom: 32, left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 100 },
-    actionFab: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1C1C1E', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
+    // Compact Actions
+    actionsOverlay: { position: 'absolute', bottom: 20, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 100, pointerEvents: 'box-none' },
+    actionFab: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1C1C1E', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
     secondaryFab: { backgroundColor: '#1C1C1E' },
-    compileFab: { flexDirection: 'row', width: 'auto', paddingHorizontal: 24, backgroundColor: '#34C759' },
-    compileFabText: { color: '#fff', fontSize: 16, fontWeight: '800', marginLeft: 10 },
+    compileFab: { flexDirection: 'row', paddingHorizontal: 20, height: 44, borderRadius: 22, backgroundColor: '#1C1C1E', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, flex: 1, marginHorizontal: 12 },
+    compileBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    sheet: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%', paddingBottom: 40 },
-    sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
-    sheetTitle: { fontSize: 20, fontWeight: '900', color: '#1C1C1E' },
-    closeBtn: { padding: 8 },
-    sheetContent: { padding: 24, gap: 16 },
-    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 12, borderRadius: 20 },
-    itemRowActive: { borderWidth: 2, borderColor: Colors.light.primary },
-    itemThumb: { width: 60, height: 60, borderRadius: 12, marginRight: 16 },
-    itemInfo: { flex: 1 },
-    itemName: { fontSize: 16, fontWeight: '800', color: '#1C1C1E' },
-    itemPrice: { fontSize: 14, color: '#8E8E93', fontWeight: '600', marginTop: 2 },
-
-    onboardingHeader: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    backBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, gap: 8 },
-    backBtnText: { fontSize: 13, fontWeight: '700', color: '#1C1C1E' },
-    onboardingTitle: { fontSize: 15, fontWeight: '800', color: '#1C1C1E' },
+    // Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#FEFBF8', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '70%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: '#1C1C1E' },
+    inventoryList: { padding: 20, paddingBottom: 60 },
+    inventoryItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 10, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#F2F2F7' },
+    itemThumb: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F2F2F7', marginRight: 12 },
+    itemMeta: { flex: 1 },
+    itemName: { fontSize: 14, fontWeight: '700', color: '#1C1C1E' },
+    itemPrice: { fontSize: 13, color: '#007AFF', fontWeight: '600' }
 });

@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     avatarContainer: { marginRight: 20, position: 'relative' },
     avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: '#FEFBF8', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     avatarImage: { width: '100%', height: '100%' },
-    cameraBadge: { position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+    cameraBadge: { display: 'none', position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
     profileInfo: { flex: 1 },
     userName: { fontSize: 20, fontWeight: '900', color: '#1C1C1E' },
