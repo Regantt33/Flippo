@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
 
     marketList: { width: '100%', maxHeight: 350 },
     marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24, marginBottom: 16 },
-    marketLogo: { width: 80, height: 24 },
+    marketLogo: { width: 48, height: 48, borderRadius: 8 },
     marketInfo: { flex: 1, marginLeft: 16 },
     marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
     marketAction: { fontSize: 12, color: Colors.light.primary, fontWeight: '700', marginTop: 2 },

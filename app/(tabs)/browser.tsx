@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     hubSubtitle: { fontSize: 15, color: '#8E8E93', fontWeight: '500', marginTop: 4 },
     hubGrid: { paddingHorizontal: 24, gap: 16, paddingBottom: 100 },
     marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24 },
-    marketLogo: { width: 90, height: 28 },
+    marketLogo: { width: 48, height: 48, borderRadius: 8 },
     marketInfo: { flex: 1, marginLeft: 16 },
     marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
     marketBadge: { backgroundColor: '#34C75915', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginTop: 4 },

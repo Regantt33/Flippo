@@ -3,11 +3,11 @@ import { Image, ImageStyle, StyleProp, StyleSheet, Text, View } from 'react-nati
 
 // Local assets for reliable loading
 const MARKETPLACE_LOGOS: Record<string, any> = {
-    'vinted': require('../assets/logos/vinted.png'),
-    'ebay': require('../assets/logos/ebay.png'),
-    'subito': require('../assets/logos/subito.png'),
-    'depop': require('../assets/logos/depop.png'),
-    'wallapop': require('../assets/logos/wallapop.png'),
+    'vinted': require('../assets/logos/vinted_v2.png'),
+    'ebay': require('../assets/logos/ebay_v2.png'),
+    'subito': require('../assets/logos/subito_v2.png'),
+    'depop': require('../assets/logos/depop_v2.png'),
+    'wallapop': require('../assets/logos/wallapop_v2.png'),
 };
 
 // Fallback URLs for logos not available locally (none needed now)
@@ -59,8 +59,8 @@ export function MarketplaceLogo({ id, style, resizeMode = 'contain' }: Props) {
 
 const styles = StyleSheet.create({
     base: {
-        width: 40,
-        height: 40,
+        width: '100%',
+        height: '100%',
     },
     placeholder: {
         backgroundColor: '#007AFF',

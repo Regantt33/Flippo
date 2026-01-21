@@ -1,3 +1,4 @@
+import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
@@ -152,8 +153,8 @@ export default function ProfileScreen() {
                             <View key={m.id}>
                                 <View style={styles.row}>
                                     <View style={styles.rowLeft}>
-                                        <View style={[styles.iconBox, { backgroundColor: m.color + '15' }]}>
-                                            <FontAwesome name={m.icon as any} size={16} color={m.color} />
+                                        <View style={[styles.iconBox, { backgroundColor: '#fff', overflow: 'hidden' }]}>
+                                            <MarketplaceLogo id={m.id} style={{ width: '100%', height: '100%' }} />
                                         </View>
                                         <View>
                                             <Text style={styles.rowTitle}>{m.name}</Text>

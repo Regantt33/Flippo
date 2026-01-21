@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     wizardSubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', fontWeight: '500' },
     wizardList: { gap: 12, marginBottom: 32 },
     wizItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 20, backgroundColor: '#F8F9FB' },
-    wizLogo: { width: 80, height: 24 },
+    wizLogo: { width: 48, height: 48, borderRadius: 8 },
     wizInfo: { flex: 1, marginLeft: 16 },
     wizName: { fontSize: 16, fontWeight: '800', color: '#1C1C1E' },
     wizStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '600' },
