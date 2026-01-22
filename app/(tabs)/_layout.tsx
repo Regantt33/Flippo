@@ -1,12 +1,9 @@
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
-import { Colors } from '@/constants/Colors';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof Feather>['name'];
@@ -24,7 +21,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#1C1C1E', // Nero (Richiesto)
         tabBarInactiveTintColor: '#8E8E93',
-        headerShown: useClientOnlyValue(false, true),
+        headerShown: false,
         // RIMOZIONE TOTALE DI tabBarStyle per stabilità assoluta
         // Nessun backgroundColor, nessun border, nulla. Default di sistema.
       }}>
@@ -37,20 +34,6 @@ export default function TabLayout() {
               name="home"
               color={focused ? '#1C1C1E' : color}
             />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[theme].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
           ),
         }}
       />

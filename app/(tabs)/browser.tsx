@@ -246,7 +246,10 @@ export default function BrowserScreen() {
                     </View>
                 ) : (
                     <View style={styles.switcherScroll}>
-                        <PremiumButton style={styles.homeBtn} onPress={() => setUrl('')}>
+                        <PremiumButton style={styles.homeBtn} onPress={() => {
+                            setUrl('');
+                            setCurrentSite(null);
+                        }}>
                             <FontAwesome name="th-large" size={16} color="#1C1C1E" />
                         </PremiumButton>
 
@@ -283,6 +286,7 @@ export default function BrowserScreen() {
 
             <WebView
                 ref={webViewRef}
+                key={currentSite || 'default'}
                 source={{ uri: url }}
                 style={styles.webview}
                 onLoadStart={() => setIsLoading(true)}
