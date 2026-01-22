@@ -1,3 +1,4 @@
+import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { Colors } from '@/constants/Colors';
 import { InventoryItem, StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -88,7 +89,7 @@ export default function InventoryScreen() {
 
         <View style={styles.actions}>
           <PremiumButton
-            style={[styles.actionBtn, { backgroundColor: '#F8F9FB' }]}
+            style={[styles.actionBtn, { backgroundColor: Colors.light.surface }]}
             onPress={() => router.push({ pathname: '/new-item', params: { id: item.id } })}
           >
             <FontAwesome name="pencil" size={12} color="#8E8E93" />
@@ -111,45 +112,47 @@ export default function InventoryScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inventario</Text>
-        <PremiumButton style={styles.addFab} onPress={() => router.push('/new-item')}>
-          <FontAwesome name="plus" size={18} color="#fff" />
-        </PremiumButton>
-      </View>
+    <SwipeWrapper leftRoute="/(tabs)" rightRoute="/(tabs)/browser">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Inventario</Text>
+          <PremiumButton style={styles.addFab} onPress={() => router.push('/new-item')}>
+            <FontAwesome name="plus" size={18} color="#fff" />
+          </PremiumButton>
+        </View>
 
-      <View style={styles.searchBox}>
-        <FontAwesome name="search" size={14} color="#8E8E93" style={styles.searchIcon} />
-        <TextInput
-          placeholder="Cerca nell'inventario..."
-          placeholderTextColor="#C7C7CC"
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
+        <View style={styles.searchBox}>
+          <FontAwesome name="search" size={14} color="#8E8E93" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Cerca nell'inventario..."
+            placeholderTextColor="#C7C7CC"
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+
+        <FlatList
+          data={filteredItems}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyView}>
+              <View style={styles.emptyIcon}>
+                <FontAwesome name="cube" size={40} color="#F2F2F7" />
+              </View>
+              <Text style={styles.emptyTitle}>Inventario Vuoto</Text>
+              <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto su Selly per iniziare a vendere.</Text>
+              <PremiumButton style={styles.emptyBtn} onPress={() => router.push('/new-item')}>
+                <Text style={styles.emptyBtnText}>Aggiungi Prodotto</Text>
+              </PremiumButton>
+            </View>
+          }
         />
       </View>
-
-      <FlatList
-        data={filteredItems}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyView}>
-            <View style={styles.emptyIcon}>
-              <FontAwesome name="cube" size={40} color="#F2F2F7" />
-            </View>
-            <Text style={styles.emptyTitle}>Inventario Vuoto</Text>
-            <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto su Selly per iniziare a vendere.</Text>
-            <PremiumButton style={styles.emptyBtn} onPress={() => router.push('/new-item')}>
-              <Text style={styles.emptyBtnText}>Aggiungi Prodotto</Text>
-            </PremiumButton>
-          </View>
-        }
-      />
-    </View>
+    </SwipeWrapper>
   );
 }
 
@@ -163,13 +166,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20
   },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
-  addFab: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#1C1C1E', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
+  headerTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
+  addFab: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
 
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FB',
+    backgroundColor: Colors.light.surface,
     marginHorizontal: 24,
     marginBottom: 24,
     paddingHorizontal: 16,
@@ -177,27 +180,27 @@ const styles = StyleSheet.create({
     height: 52,
   },
   searchIcon: { marginRight: 12 },
-  searchInput: { flex: 1, fontSize: 16, color: '#1C1C1E', fontWeight: '600' },
+  searchInput: { flex: 1, fontSize: 16, color: Colors.light.text, fontWeight: '600' },
 
   listContainer: { paddingHorizontal: 24, paddingBottom: 120 },
 
   itemCard: {
     flexDirection: 'row',
-    backgroundColor: '#FEFBF8',
+    backgroundColor: Colors.light.background,
     borderRadius: 24,
     padding: 12,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: Colors.light.surfaceHighlight,
   },
-  imageBox: { borderRadius: 16, overflow: 'hidden', backgroundColor: '#F8F9FB' },
+  imageBox: { borderRadius: 16, overflow: 'hidden', backgroundColor: Colors.light.surface },
   itemImage: { width: 72, height: 72 },
   imagePlaceholder: { width: 72, height: 72, justifyContent: 'center', alignItems: 'center' },
 
   itemInfo: { flex: 1, marginLeft: 16 },
-  itemTitle: { fontWeight: '800', fontSize: 16, color: '#1C1C1E', marginBottom: 2 },
-  itemPrice: { color: '#8E8E93', fontWeight: '700', fontSize: 14, marginBottom: 8 },
+  itemTitle: { fontWeight: '800', fontSize: 16, color: Colors.light.text, marginBottom: 2 },
+  itemPrice: { color: Colors.light.icon, fontWeight: '700', fontSize: 14, marginBottom: 8 },
 
   mkContainer: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   mkDot: { width: 10, height: 10, borderRadius: 5 },
@@ -207,9 +210,9 @@ const styles = StyleSheet.create({
   actionBtn: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
   emptyView: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F8F9FB', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 22, fontWeight: '900', color: '#1C1C1E' },
-  emptySubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', marginTop: 8, paddingHorizontal: 40, fontWeight: '500', lineHeight: 22 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 22, fontWeight: '900', color: Colors.light.text },
+  emptySubtitle: { fontSize: 15, color: Colors.light.icon, textAlign: 'center', marginTop: 8, paddingHorizontal: 40, fontWeight: '500', lineHeight: 22 },
   emptyBtn: { marginTop: 32, backgroundColor: '#1C1C1E', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 20 },
   emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });

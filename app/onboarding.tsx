@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
                 setStep(step + 1);
                 Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
             } else {
-                router.replace('/(tabs)');
+                router.replace('/loading');
             }
         });
     };
@@ -226,15 +226,15 @@ const styles = StyleSheet.create({
     content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center' },
 
     indicatorContainer: { flexDirection: 'row', gap: 8 },
-    indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F2F2F7' },
-    indicatorActive: { width: 24, backgroundColor: '#1C1C1E' },
+    indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.light.surfaceHighlight },
+    indicatorActive: { width: 24, backgroundColor: Colors.light.primary },
 
     stepContainer: { alignItems: 'center', width: '100%' },
     heroImageContainer: { width: 200, height: 200, justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
-    blob: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: '#F8F9FB' },
+    blob: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: Colors.light.surface },
 
-    title: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', textAlign: 'center', letterSpacing: -1.2, lineHeight: 40 },
-    subtitle: { fontSize: 16, color: '#8E8E93', textAlign: 'center', marginTop: 16, lineHeight: 24, fontWeight: '500' },
+    title: { fontSize: 32, fontWeight: '900', color: Colors.light.text, textAlign: 'center', letterSpacing: -1.2, lineHeight: 40 },
+    subtitle: { fontSize: 16, color: Colors.light.icon, textAlign: 'center', marginTop: 16, lineHeight: 24, fontWeight: '500' },
 
     spacer: { height: 48 }, // Fix for "minimo spazio tra testo e pulsanti"
 
@@ -243,19 +243,19 @@ const styles = StyleSheet.create({
 
     // Profile Step Styles
     profileSection: { width: '100%', alignItems: 'center' },
-    avatarPicker: { width: 120, height: 120, borderRadius: 44, backgroundColor: '#F8F9FB', marginBottom: 32, overflow: 'hidden' },
+    avatarPicker: { width: 120, height: 120, borderRadius: 44, backgroundColor: Colors.light.surface, marginBottom: 32, overflow: 'hidden' },
     avatarPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     avatarImg: { width: '100%', height: '100%' },
-    inputCard: { width: '100%', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24 },
-    inputLabel: { fontSize: 11, fontWeight: '800', color: '#C7C7CC', letterSpacing: 1, marginBottom: 12 },
-    input: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
+    inputCard: { width: '100%', backgroundColor: Colors.light.surface, padding: 20, borderRadius: 24 },
+    inputLabel: { fontSize: 11, fontWeight: '800', color: '#BDB9B0', letterSpacing: 1, marginBottom: 12 },
+    input: { fontSize: 18, fontWeight: '700', color: Colors.light.text },
 
     marketList: { width: '100%', maxHeight: 350 },
-    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FB', padding: 20, borderRadius: 24, marginBottom: 16 },
+    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, padding: 20, borderRadius: 24, marginBottom: 16 },
     marketLogo: { width: 48, height: 48, borderRadius: 8 },
     marketInfo: { flex: 1, marginLeft: 16 },
-    marketName: { fontSize: 17, fontWeight: '800', color: '#1C1C1E' },
-    marketAction: { fontSize: 12, color: Colors.light.primary, fontWeight: '700', marginTop: 2 },
+    marketName: { fontSize: 17, fontWeight: '800', color: Colors.light.text },
+    marketAction: { fontSize: 12, color: Colors.light.accent, fontWeight: '700', marginTop: 2 },
 
     mainBtn: { width: '100%', height: 64, backgroundColor: '#1C1C1E', borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 5 },
     mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },

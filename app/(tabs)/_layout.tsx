@@ -1,9 +1,8 @@
+import { Colors } from '@/constants/Colors';
 import Feather from '@expo/vector-icons/Feather';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-
-import { useColorScheme } from '@/components/useColorScheme';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof Feather>['name'];
@@ -13,17 +12,18 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme ?? 'light';
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#1C1C1E', // Nero (Richiesto)
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: Colors.light.primary,
+        tabBarInactiveTintColor: Colors.light.icon,
         headerShown: false,
-        // RIMOZIONE TOTALE DI tabBarStyle per stabilità assoluta
-        // Nessun backgroundColor, nessun border, nulla. Default di sistema.
+        tabBarStyle: {
+          backgroundColor: '#FEFBF8',
+        },
+        tabBarItemStyle: {
+          // kept default
+        }
       }}>
       <Tabs.Screen
         name="index"
@@ -73,7 +73,7 @@ export default function TabLayout() {
           ),
         }}
       />
-    </Tabs>
+    </Tabs >
   );
 }
 

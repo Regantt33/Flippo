@@ -1,3 +1,4 @@
+import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { Colors } from '@/constants/Colors';
 import { GmailService, SellyNotification } from '@/services/gmail';
 import { SettingsService, UserProfile } from '@/services/settings';
@@ -81,110 +82,112 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} />}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Image
-              source={require('@/assets/images/selly-logo.png')}
-              style={{ width: 40, height: 40, marginBottom: 8 }}
-              resizeMode="contain"
-            // tintColor="#1C1C1E" // Optional: if logo is black, no need. If it's multi-color, keep original.
-            />
-            <Text style={styles.welcomeText}>BENTORNATA,</Text>
-            <Text style={styles.pageTitle}>{profile?.name}</Text>
-          </View>
-          <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
-            {profile?.avatar ? (
-              <Image source={{ uri: profile.avatar }} style={styles.avatarImg} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: Colors.light.primary + '15' }]}>
-                <FontAwesome name="user-o" size={18} color={Colors.light.primary} />
-              </View>
-            )}
-          </PremiumButton>
-        </View>
-
-        {/* Condensed Summary Tiles */}
-        <View style={styles.summaryBar}>
-          <View style={styles.summaryTile}>
-            <Text style={styles.summaryValue}>€{stats.value.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</Text>
-            <Text style={styles.summaryLabel}>Valore</Text>
-          </View>
-          <View style={styles.tileDivider} />
-          <View style={styles.summaryTile}>
-            <Text style={styles.summaryValue}>{stats.active}</Text>
-            <Text style={styles.summaryLabel}>Attivi</Text>
-          </View>
-          <View style={styles.tileDivider} />
-          <View style={styles.summaryTile}>
-            <Text style={styles.summaryValue}>{stats.draft}</Text>
-            <Text style={styles.summaryLabel}>Bozze</Text>
-          </View>
-        </View>
-
-        {/* Marketplace Filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
-          {['all', 'vinted', 'ebay', 'subito'].map((f) => (
-            <PremiumButton
-              key={f}
-              onPress={() => setActiveFilter(f as any)}
-              style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
-                {f === 'all' ? 'Tutti' : f.charAt(0).toUpperCase() + f.slice(1)}
-              </Text>
+    <SwipeWrapper rightRoute="/(tabs)/inventory">
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} />}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View>
+              <Image
+                source={require('@/assets/images/selly-logo.png')}
+                style={{ width: 40, height: 40, marginBottom: 8 }}
+                resizeMode="contain"
+              // tintColor="#1C1C1E" // Optional: if logo is black, no need. If it's multi-color, keep original.
+              />
+              <Text style={styles.welcomeText}>BENTORNATA,</Text>
+              <Text style={styles.pageTitle}>{profile?.name}</Text>
+            </View>
+            <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
+              {profile?.avatar ? (
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImg} />
+              ) : (
+                <View style={[styles.avatarPlaceholder, { backgroundColor: Colors.light.primary + '15' }]}>
+                  <FontAwesome name="user-o" size={18} color={Colors.light.primary} />
+                </View>
+              )}
             </PremiumButton>
-          ))}
+          </View>
+
+          {/* Condensed Summary Tiles */}
+          <View style={styles.summaryBar}>
+            <View style={styles.summaryTile}>
+              <Text style={styles.summaryValue}>€{stats.value.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</Text>
+              <Text style={styles.summaryLabel}>Valore</Text>
+            </View>
+            <View style={styles.tileDivider} />
+            <View style={styles.summaryTile}>
+              <Text style={styles.summaryValue}>{stats.active}</Text>
+              <Text style={styles.summaryLabel}>Attivi</Text>
+            </View>
+            <View style={styles.tileDivider} />
+            <View style={styles.summaryTile}>
+              <Text style={styles.summaryValue}>{stats.draft}</Text>
+              <Text style={styles.summaryLabel}>Bozze</Text>
+            </View>
+          </View>
+
+          {/* Marketplace Filters */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
+            {['all', 'vinted', 'ebay', 'subito'].map((f) => (
+              <PremiumButton
+                key={f}
+                onPress={() => setActiveFilter(f as any)}
+                style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
+                  {f === 'all' ? 'Tutti' : f.charAt(0).toUpperCase() + f.slice(1)}
+                </Text>
+              </PremiumButton>
+            ))}
+          </ScrollView>
+
+          {/* NOTIFICATION FEED */}
+          <View style={styles.feedContainer}>
+            {filteredNotifications.length === 0 ? (
+              <View style={styles.emptyFeed}>
+                <View style={styles.emptyIconBox}>
+                  <FontAwesome name="check-circle-o" size={32} color="#C7C7CC" />
+                </View>
+                <Text style={styles.emptyTitle}>Tutto Aggiornato</Text>
+                <Text style={styles.emptySubtitle}>Nessuna attività richiesta per i filtri selezionati.</Text>
+              </View>
+            ) : (
+              filteredNotifications.map((n, idx) => (
+                <View key={n.id}>
+                  <PremiumButton style={styles.listItem} onPress={() => handleNotificationPress(n)}>
+                    <View style={styles.notifRow}>
+                      <View style={[styles.iconBox, { backgroundColor: n.platform === 'vinted' ? '#09B1BA20' : n.platform === 'ebay' ? '#E5323820' : '#FF3B3020' }]}>
+                        <FontAwesome name={getIcon(n.type) as any} size={16} color={n.platform === 'vinted' ? '#09B1BA' : n.platform === 'ebay' ? '#E53238' : '#FF3B30'} />
+                      </View>
+                      <View style={styles.notifContent}>
+                        <View style={styles.notifTop}>
+                          <Text style={styles.notifPlatform} numberOfLines={1}>{n.platform.toUpperCase()}</Text>
+                          <Text style={styles.itemTime}>{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                        </View>
+                        <Text style={styles.itemTitle} numberOfLines={1}>{n.title}</Text>
+                        <Text style={styles.itemSubtitle} numberOfLines={1}>{n.body}</Text>
+                      </View>
+                    </View>
+                  </PremiumButton>
+                  {idx < filteredNotifications.length - 1 && <View style={styles.divider} />}
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* NOTIFICATION FEED */}
-        <View style={styles.feedContainer}>
-          {filteredNotifications.length === 0 ? (
-            <View style={styles.emptyFeed}>
-              <View style={styles.emptyIconBox}>
-                <FontAwesome name="check-circle-o" size={32} color="#C7C7CC" />
-              </View>
-              <Text style={styles.emptyTitle}>Tutto Aggiornato</Text>
-              <Text style={styles.emptySubtitle}>Nessuna attività richiesta per i filtri selezionati.</Text>
-            </View>
-          ) : (
-            filteredNotifications.map((n, idx) => (
-              <View key={n.id}>
-                <PremiumButton style={styles.listItem} onPress={() => handleNotificationPress(n)}>
-                  <View style={styles.notifRow}>
-                    <View style={[styles.iconBox, { backgroundColor: n.platform === 'vinted' ? '#09B1BA20' : n.platform === 'ebay' ? '#E5323820' : '#FF3B3020' }]}>
-                      <FontAwesome name={getIcon(n.type) as any} size={16} color={n.platform === 'vinted' ? '#09B1BA' : n.platform === 'ebay' ? '#E53238' : '#FF3B30'} />
-                    </View>
-                    <View style={styles.notifContent}>
-                      <View style={styles.notifTop}>
-                        <Text style={styles.notifPlatform} numberOfLines={1}>{n.platform.toUpperCase()}</Text>
-                        <Text style={styles.itemTime}>{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                      </View>
-                      <Text style={styles.itemTitle} numberOfLines={1}>{n.title}</Text>
-                      <Text style={styles.itemSubtitle} numberOfLines={1}>{n.body}</Text>
-                    </View>
-                  </View>
-                </PremiumButton>
-                {idx < filteredNotifications.length - 1 && <View style={styles.divider} />}
-              </View>
-            ))
-          )}
-        </View>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      {/* Quick Sync Action */}
-      <PremiumButton style={styles.fabSync} onPress={onRefresh}>
-        {refreshing ? <View style={styles.rotate}><FontAwesome name="refresh" size={20} color="#fff" /></View> : <FontAwesome name="refresh" size={20} color="#fff" />}
-      </PremiumButton>
-    </View>
+        {/* Quick Sync Action */}
+        <PremiumButton style={styles.fabSync} onPress={onRefresh}>
+          {refreshing ? <View style={styles.rotate}><FontAwesome name="refresh" size={20} color="#fff" /></View> : <FontAwesome name="refresh" size={20} color="#fff" />}
+        </PremiumButton>
+      </View>
+    </SwipeWrapper>
   );
 }
 
@@ -192,15 +195,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FEFBF8' },
   scrollContent: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 150 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
-  welcomeText: { fontSize: 13, fontWeight: '700', color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 0.8 },
-  pageTitle: { fontSize: 32, fontWeight: '900', color: '#1C1C1E', letterSpacing: -1 },
-  avatarBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#F8F9FB', overflow: 'hidden' },
+  welcomeText: { fontSize: 13, fontWeight: '700', color: Colors.light.icon, textTransform: 'uppercase', letterSpacing: 0.8 },
+  pageTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
+  avatarBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.light.surface, overflow: 'hidden' },
   avatarPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarImg: { width: '100%', height: '100%' },
 
   summaryBar: {
     flexDirection: 'row',
-    backgroundColor: '#F8F9FB',
+    backgroundColor: Colors.light.surface,
     borderRadius: 24,
     padding: 20,
     marginBottom: 32,
@@ -208,21 +211,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   summaryTile: { flex: 1, alignItems: 'center' },
-  summaryValue: { fontSize: 18, fontWeight: '900', color: '#1C1C1E' },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginTop: 4, textTransform: 'uppercase' },
-  tileDivider: { width: 1, height: 24, backgroundColor: '#E5E5EA' },
+  summaryValue: { fontSize: 18, fontWeight: '900', color: Colors.light.text },
+  summaryLabel: { fontSize: 11, fontWeight: '700', color: Colors.light.icon, marginTop: 4, textTransform: 'uppercase' },
+  tileDivider: { width: 1, height: 24, backgroundColor: Colors.light.surfaceHighlight },
 
   filterBar: { gap: 10, marginBottom: 20, paddingRight: 40 },
-  filterChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, backgroundColor: '#F8F9FB', borderWidth: 1, borderColor: '#F2F2F7' },
-  filterChipActive: { backgroundColor: '#1C1C1E', borderColor: '#1C1C1E' },
-  filterText: { fontSize: 14, fontWeight: '700', color: '#8E8E93' },
+  filterChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
+  filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
+  filterText: { fontSize: 14, fontWeight: '700', color: Colors.light.icon },
   filterTextActive: { color: '#FFFFFF' },
 
   feedContainer: {
-    backgroundColor: '#FEFBF8',
+    backgroundColor: Colors.light.background,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: Colors.light.surfaceHighlight,
     paddingVertical: 10,
     minHeight: 300,
   },
@@ -231,14 +234,14 @@ const styles = StyleSheet.create({
   iconBox: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16, marginTop: 4 },
   notifContent: { flex: 1 },
   notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  notifPlatform: { fontSize: 11, fontWeight: '900', color: '#8E8E93', letterSpacing: 1 },
+  notifPlatform: { fontSize: 11, fontWeight: '900', color: Colors.light.icon, letterSpacing: 1 },
   itemTime: { fontSize: 11, color: '#C7C7CC', fontWeight: '600' },
-  itemTitle: { fontSize: 16, fontWeight: '800', color: '#1C1C1E', marginBottom: 2 },
-  itemSubtitle: { fontSize: 14, color: '#8E8E93', fontWeight: '500' },
-  divider: { height: 1, backgroundColor: '#F2F2F7', marginHorizontal: 18 },
+  itemTitle: { fontSize: 16, fontWeight: '800', color: Colors.light.text, marginBottom: 2 },
+  itemSubtitle: { fontSize: 14, color: Colors.light.icon, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: Colors.light.surfaceHighlight, marginHorizontal: 18 },
 
   emptyFeed: { padding: 60, alignItems: 'center', justifyContent: 'center' },
-  emptyIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F8F9FB', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '800', color: '#1C1C1E' },
   emptySubtitle: { fontSize: 14, color: '#8E8E93', marginTop: 4, textAlign: 'center', fontWeight: '500', lineHeight: 20 },
 

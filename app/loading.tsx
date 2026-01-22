@@ -1,91 +1,163 @@
-
-import { Text, View } from '@/components/Themed';
-import { Colors } from '@/constants/Colors';
+import { View } from '@/components/Themed';
+import { ConfigService } from '@/services/ConfigService';
+import { ResizeMode, Video } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, SafeAreaView, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { Animated, Dimensions, SafeAreaView, StyleSheet } from 'react-native';
+
+const { width } = Dimensions.get('window');
 
 export default function LoadingSyncScreen() {
     const router = useRouter();
+    // Progress Bar Animation
+    const progressAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const [syncStatus, setSyncStatus] = useState('Initializing Secure Core...');
-    const [syncedCount, setSyncedCount] = useState(0);
+    const progressBarOpacity = useRef(new Animated.Value(1)).current; // New opacity for bar only
 
-    // Hidden WebViews refs
-    const vintedRef = useRef<WebView>(null);
-    const ebayRef = useRef<WebView>(null);
+    // Status State
+    const [statusText, setStatusText] = useState('Inizializzazione...');
+    const [configLoaded, setConfigLoaded] = useState(false);
+    const [minTimePassed, setMinTimePassed] = useState(false);
+
+    // Video Refs to manage playback
+    const loadingVideo = useRef<Video>(null);
+    const endVideo = useRef<Video>(null);
+
+    // Phase: 'loading' (loop) -> 'ending' (play once)
+    const [phase, setPhase] = useState<'loading' | 'ending'>('loading');
 
     useEffect(() => {
         // Animation in
         Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 1000,
+            duration: 500,
             useNativeDriver: true,
         }).start();
 
-        // Simulation of Sync Process
-        simulateSync();
+        // Progress Bar Simulation
+        Animated.timing(progressAnim, {
+            toValue: 0.8, // Go to 80% quickly
+            duration: 2000,
+            useNativeDriver: false,
+        }).start();
+
+        // Start Config Fetch
+        loadConfig();
+
+        // Enforce minimum time for the loading video
+        const timer = setTimeout(() => {
+            setMinTimePassed(true);
+        }, 2200);
+
+        return () => clearTimeout(timer);
     }, []);
 
-    const simulateSync = async () => {
-        // Step 1: Initialize Local Storage
-        setSyncStatus('Loading Local Encrypted DB...');
-        await new Promise(r => setTimeout(r, 1000));
+    const loadConfig = async () => {
+        setStatusText('Ottimizzazione esperienza...');
+        try {
+            await ConfigService.fetchConfig();
+            console.log('Config loaded');
+        } catch (e) {
+            console.error('Config load failed', e);
+        } finally {
+            setConfigLoaded(true);
+        }
+    };
 
-        // Step 2: Inject Scripts into Hidden WebViews (simulated here)
-        setSyncStatus('Establishing Peer-to-Peer connections...');
-        // Real implementation would wait for onMessage from WebViews
-        await new Promise(r => setTimeout(r, 1500));
+    // Watch for both conditions to be met
+    useEffect(() => {
+        if (configLoaded && minTimePassed && phase === 'loading') {
+            finishLoading();
+        }
+    }, [configLoaded, minTimePassed, phase]);
 
-        setSyncStatus('Syncing Vinted Messages...');
-        await new Promise(r => setTimeout(r, 800));
+    const finishLoading = () => {
+        // 1. Complete the progress bar
+        Animated.timing(progressAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: false,
+        }).start(() => {
+            // 2. Fade out status and bar
+            setStatusText('');
+            Animated.timing(progressBarOpacity, {
+                toValue: 0,
+                duration: 400,
+                useNativeDriver: true,
+            }).start(() => {
+                // 3. Start ending video
+                transitionToEnding();
+            });
+        });
+    };
 
-        setSyncStatus('Syncing eBay Orders...');
-        await new Promise(r => setTimeout(r, 800));
+    const transitionToEnding = () => {
+        setPhase('ending');
+    };
 
-        setSyncStatus('Ready.');
-        await new Promise(r => setTimeout(r, 500));
-
-        // Navigate to Dashboard
-        router.replace('/(tabs)');
+    const handleEndVideoFinish = () => {
+        // Navigate away after the end video finishes
+        // Wait slightly to show the final state
+        setTimeout(() => {
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 400,
+                useNativeDriver: true,
+            }).start(() => {
+                router.replace('/(tabs)');
+            });
+        }, 300);
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-                <Image
-                    source={require('@/assets/images/selly-logo.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                {/* Text removed as requested, logo contains brand name */}
 
-                <View style={styles.loaderContainer}>
-                    <View style={styles.progressBar}>
-                        <View style={styles.progressFill} />
-                    </View>
-                    <Text style={styles.statusText}>{syncStatus}</Text>
-                </View>
-
-                <View style={styles.securityBadge}>
-                    <Text style={styles.securityText}>Running in Local-Only Mode</Text>
-                </View>
-
-                {/* HIDDEN WEBVIEWS FOR BACKGROUND SYNC */}
-                {/* These would be 0x0 size but loaded to run scripts */}
-                <View style={{ height: 0, width: 0, overflow: 'hidden' }}>
-                    <WebView
-                        ref={vintedRef}
-                        source={{ uri: 'https://www.vinted.it' }}
-                        onMessage={(e) => console.log('Vinted Sync:', e.nativeEvent.data)}
+                <View style={styles.videoContainer}>
+                    {/* Render BOTH videos to ensure instant switch */}
+                    <Video
+                        ref={loadingVideo}
+                        style={[styles.video, { opacity: phase === 'loading' ? 1 : 0 }]}
+                        source={require('@/assets/videos/loading.mp4')}
+                        useNativeControls={false}
+                        resizeMode={ResizeMode.CONTAIN}
+                        isLooping
+                        shouldPlay={phase === 'loading'}
                     />
-                    <WebView
-                        ref={ebayRef}
-                        source={{ uri: 'https://www.ebay.it' }}
-                        onMessage={(e) => console.log('eBay Sync:', e.nativeEvent.data)}
+
+                    <Video
+                        ref={endVideo}
+                        style={[styles.video, { position: 'absolute', opacity: phase === 'ending' ? 1 : 0 }]}
+                        source={require('@/assets/videos/endloading.mp4')}
+                        useNativeControls={false}
+                        resizeMode={ResizeMode.CONTAIN}
+                        isLooping={false}
+                        shouldPlay={phase === 'ending'}
+                        onPlaybackStatusUpdate={(status) => {
+                            if (status.isLoaded && status.didJustFinish) {
+                                handleEndVideoFinish();
+                            }
+                        }}
                     />
                 </View>
+
+                {/* Modern Black Progress Bar */}
+                <Animated.View style={[styles.progressContainer, { opacity: progressBarOpacity }]}>
+                    <Animated.View
+                        style={[
+                            styles.progressBar,
+                            {
+                                width: progressAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0%', '100%']
+                                })
+                            }
+                        ]}
+                    />
+                </Animated.View>
+
+                <Animated.Text style={[styles.statusText, { opacity: progressBarOpacity }]}>{statusText}</Animated.Text>
+
             </Animated.View>
         </SafeAreaView>
     );
@@ -101,41 +173,38 @@ const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
         width: '100%',
+        height: '100%',
+        justifyContent: 'center',
     },
-    logo: {
-        width: 280, // Increased size
-        height: 280,
+    videoContainer: {
+        width: 150,
+        height: 150,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: 40,
     },
-    loaderContainer: {
-        width: '70%',
-        alignItems: 'center',
+    video: {
+        width: '100%',
+        height: '100%',
+    },
+    progressContainer: {
+        width: width * 0.6, // Compact width
+        height: 4,
+        backgroundColor: '#E5E5EA', // Subtle gray track
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 16,
     },
     progressBar: {
-        width: '100%',
-        height: 6, // Slightly thicker
-        backgroundColor: '#F2F2F7',
-        borderRadius: 3,
-        marginBottom: 15,
-        overflow: 'hidden',
-    },
-    progressFill: {
         height: '100%',
-        width: '60%', // Static for demo, would be animated
-        backgroundColor: Colors.light.primary,
+        backgroundColor: '#1C1C1E', // Modern Black
+        borderRadius: 2,
     },
     statusText: {
-        fontSize: 15,
-        color: '#8E8E93',
-        fontWeight: '500',
-    },
-    securityBadge: {
-        position: 'absolute',
-        bottom: -100, // Adjusted positioning
-        padding: 10,
-    },
-    securityText: {
-        fontSize: 13,
-        color: '#D1D1D6',
+        fontSize: 12, // Smaller, more minimal
+        color: '#8E8E93', // Muted gray
+        fontWeight: '600',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
     }
 });

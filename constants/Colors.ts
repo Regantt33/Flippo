@@ -3,26 +3,29 @@
  * Clean White, Soft Greys, Vibrant Accents
  */
 
-const flippoBlue = '#007AFF'; // Apple System Blue
-const flippoGreen = '#34C759'; // Apple System Green
-const flippoOrange = '#FF9500'; // Apple System Orange
+const warmBlack = '#1C1C1E';
+const warmCream = '#FEFBF8';
+const warmSurface = '#F5F2ED'; // A slightly darker cream for cards
+const aestheticOrange = '#D66D45'; // Warm Rust/Orange Aesthetic
+const mutedGreen = '#5E8057'; // Olive success
+const mutedOrange = '#C47E5A'; // Terracotta warning
 
 export const Colors = {
   light: {
-    text: '#000000',
-    // Updated to Cream Theme
-    background: '#FEFBF8', // The new "White" (Uniform Cream)
-    surface: '#FEFBF8', // The new "White"
-    surfaceHighlight: '#E5E5EA',
-    primary: flippoBlue,
-    secondary: flippoOrange,
-    success: flippoGreen,
-    warning: flippoOrange,
-    danger: '#FF3B30',
-    tint: flippoBlue,
-    icon: '#8E8E93',
-    tabIconDefault: '#8E8E93',
-    tabIconSelected: flippoBlue,
+    text: warmBlack,
+    background: warmCream,
+    surface: warmSurface,
+    surfaceHighlight: '#E8E4DD',
+    primary: warmBlack, // User loves the black buttons
+    secondary: warmSurface,
+    accent: aestheticOrange, // Updated to Orange
+    success: mutedGreen,
+    warning: mutedOrange,
+    danger: '#D64545', // Slightly desaturated red
+    tint: warmBlack,
+    icon: '#8F8C85', // Warm Grey Icon
+    tabIconDefault: '#BDB9B0',
+    tabIconSelected: warmBlack,
   },
   dark: {
     // Keeping dark mode just in case, but mapped to Apple Dark System

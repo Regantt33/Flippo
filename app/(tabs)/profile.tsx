@@ -1,4 +1,5 @@
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
+import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
@@ -87,124 +88,126 @@ export default function ProfileScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Impostazioni</Text>
-                <PremiumButton style={styles.editBtn} onPress={() => editing ? handleSaveProfile() : setEditing(true)}>
-                    <Text style={styles.editBtnText}>{editing ? 'Fine' : 'Modifica'}</Text>
-                </PremiumButton>
-            </View>
+        <SwipeWrapper leftRoute="/(tabs)/browser">
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Impostazioni</Text>
+                    <PremiumButton style={styles.editBtn} onPress={() => editing ? handleSaveProfile() : setEditing(true)}>
+                        <Text style={styles.editBtnText}>{editing ? 'Fine' : 'Modifica'}</Text>
+                    </PremiumButton>
+                </View>
 
-            <ScrollView
-                contentContainerStyle={styles.scroll}
-                showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} tintColor={Colors.light.primary} />}
-            >
-                {/* 1. Profile Card */}
-                <View style={[styles.profileCard, editing && styles.profileCardEditing]}>
-                    <PremiumButton onPress={handlePickAvatar} disabled={!editing} style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            {profile.avatar ? (
-                                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+                <ScrollView
+                    contentContainerStyle={styles.scroll}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} tintColor={Colors.light.primary} />}
+                >
+                    {/* 1. Profile Card */}
+                    <View style={[styles.profileCard, editing && styles.profileCardEditing]}>
+                        <PremiumButton onPress={handlePickAvatar} disabled={!editing} style={styles.avatarContainer}>
+                            <View style={styles.avatar}>
+                                {profile.avatar ? (
+                                    <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+                                ) : (
+                                    <FontAwesome name="user-o" size={30} color={Colors.light.primary} />
+                                )}
+                            </View>
+                            {editing && (
+                                <View style={styles.cameraBadge}>
+                                    <FontAwesome name="camera" size={10} color="#fff" />
+                                </View>
+                            )}
+                        </PremiumButton>
+
+                        <View style={styles.profileInfo}>
+                            {editing ? (
+                                <View style={styles.editForm}>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={profile.name}
+                                        placeholder="Il tuo nome"
+                                        placeholderTextColor="#C7C7CC"
+                                        onChangeText={t => setProfile({ ...profile, name: t })}
+                                    />
+                                    <TextInput
+                                        style={styles.input}
+                                        value={profile.email}
+                                        placeholder="La tua email"
+                                        placeholderTextColor="#C7C7CC"
+                                        onChangeText={t => setProfile({ ...profile, email: t })}
+                                    />
+                                </View>
                             ) : (
-                                <FontAwesome name="user-o" size={30} color={Colors.light.primary} />
+                                <View>
+                                    <Text style={styles.userName}>{profile.name || 'Utente Selly'}</Text>
+                                    <Text style={styles.userEmail}>{profile.email || 'Nessuna email collegata'}</Text>
+                                </View>
                             )}
                         </View>
-                        {editing && (
-                            <View style={styles.cameraBadge}>
-                                <FontAwesome name="camera" size={10} color="#fff" />
-                            </View>
-                        )}
-                    </PremiumButton>
-
-                    <View style={styles.profileInfo}>
-                        {editing ? (
-                            <View style={styles.editForm}>
-                                <TextInput
-                                    style={styles.input}
-                                    value={profile.name}
-                                    placeholder="Il tuo nome"
-                                    placeholderTextColor="#C7C7CC"
-                                    onChangeText={t => setProfile({ ...profile, name: t })}
-                                />
-                                <TextInput
-                                    style={styles.input}
-                                    value={profile.email}
-                                    placeholder="La tua email"
-                                    placeholderTextColor="#C7C7CC"
-                                    onChangeText={t => setProfile({ ...profile, email: t })}
-                                />
-                            </View>
-                        ) : (
-                            <View>
-                                <Text style={styles.userName}>{profile.name || 'Utente Selly'}</Text>
-                                <Text style={styles.userEmail}>{profile.email || 'Nessuna email collegata'}</Text>
-                            </View>
-                        )}
                     </View>
-                </View>
 
-                {/* 2. Marketplaces */}
-                <Text style={styles.sectionHeader}>MARKETPLACE COLLEGATI</Text>
-                <View style={styles.section}>
-                    {marketplaces.map((m, idx) => {
-                        const isConnected = connectedMarketplaces.includes(m.id);
-                        return (
-                            <View key={m.id}>
-                                <View style={styles.row}>
-                                    <View style={styles.rowLeft}>
-                                        <View style={[styles.iconBox, { backgroundColor: '#fff', overflow: 'hidden' }]}>
-                                            <MarketplaceLogo id={m.id} style={{ width: '100%', height: '100%' }} />
+                    {/* 2. Marketplaces */}
+                    <Text style={styles.sectionHeader}>MARKETPLACE COLLEGATI</Text>
+                    <View style={styles.section}>
+                        {marketplaces.map((m, idx) => {
+                            const isConnected = connectedMarketplaces.includes(m.id);
+                            return (
+                                <View key={m.id}>
+                                    <View style={styles.row}>
+                                        <View style={styles.rowLeft}>
+                                            <View style={[styles.iconBox, { backgroundColor: '#fff', overflow: 'hidden' }]}>
+                                                <MarketplaceLogo id={m.id} style={{ width: '100%', height: '100%' }} />
+                                            </View>
+                                            <View>
+                                                <Text style={styles.rowTitle}>{m.name}</Text>
+                                                <Text style={styles.rowStatus}>
+                                                    {m.isEnabled ? (isConnected ? 'Connesso' : 'Disconnesso') : 'Disabilitato'}
+                                                </Text>
+                                            </View>
                                         </View>
-                                        <View>
-                                            <Text style={styles.rowTitle}>{m.name}</Text>
-                                            <Text style={styles.rowStatus}>
-                                                {m.isEnabled ? (isConnected ? 'Connesso' : 'Disconnesso') : 'Disabilitato'}
-                                            </Text>
+
+                                        <View style={styles.rowRight}>
+                                            {m.isEnabled && !isConnected && (
+                                                <PremiumButton style={styles.loginBtn} onPress={() => handleLogin(m.id)}>
+                                                    <Text style={styles.loginBtnText}>Login</Text>
+                                                </PremiumButton>
+                                            )}
+                                            <Switch
+                                                value={m.isEnabled}
+                                                onValueChange={(v) => toggleMarketplace(m.id, v)}
+                                                trackColor={{ false: '#F2F2F7', true: Colors.light.primary }}
+                                            />
                                         </View>
                                     </View>
-
-                                    <View style={styles.rowRight}>
-                                        {m.isEnabled && !isConnected && (
-                                            <PremiumButton style={styles.loginBtn} onPress={() => handleLogin(m.id)}>
-                                                <Text style={styles.loginBtnText}>Login</Text>
-                                            </PremiumButton>
-                                        )}
-                                        <Switch
-                                            value={m.isEnabled}
-                                            onValueChange={(v) => toggleMarketplace(m.id, v)}
-                                            trackColor={{ false: '#F2F2F7', true: Colors.light.primary }}
-                                        />
-                                    </View>
+                                    {idx < marketplaces.length - 1 && <View style={styles.divider} />}
                                 </View>
-                                {idx < marketplaces.length - 1 && <View style={styles.divider} />}
-                            </View>
-                        );
-                    })}
-                </View>
+                            );
+                        })}
+                    </View>
 
-                {/* 3. Logic & Cache */}
-                <Text style={styles.sectionHeader}>SISTEMA</Text>
-                <View style={styles.section}>
-                    <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Cache Pulita", "I dati temporanei sono stati rimossi.")}>
-                        <Text style={styles.actionText}>Svuota Cache</Text>
-                        <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
-                    </PremiumButton>
-                    <View style={styles.divider} />
-                    <PremiumButton style={styles.actionRow}>
-                        <Text style={styles.actionText}>Informativa Privacy</Text>
-                        <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
-                    </PremiumButton>
-                    <View style={styles.divider} />
-                    <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Esci", "Vuoi davvero uscire?", [{ text: "Annulla" }, { text: "Esci", style: 'destructive' }])}>
-                        <Text style={[styles.actionText, { color: '#FF3B30' }]}>Disconnetti</Text>
-                    </PremiumButton>
-                </View>
+                    {/* 3. Logic & Cache */}
+                    <Text style={styles.sectionHeader}>SISTEMA</Text>
+                    <View style={styles.section}>
+                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Cache Pulita", "I dati temporanei sono stati rimossi.")}>
+                            <Text style={styles.actionText}>Svuota Cache</Text>
+                            <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
+                        </PremiumButton>
+                        <View style={styles.divider} />
+                        <PremiumButton style={styles.actionRow}>
+                            <Text style={styles.actionText}>Informativa Privacy</Text>
+                            <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
+                        </PremiumButton>
+                        <View style={styles.divider} />
+                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Esci", "Vuoi davvero uscire?", [{ text: "Annulla" }, { text: "Esci", style: 'destructive' }])}>
+                            <Text style={[styles.actionText, { color: '#FF3B30' }]}>Disconnetti</Text>
+                        </PremiumButton>
+                    </View>
 
-                <Text style={styles.footerText}>Selly v1.0.5 Premium Redesign</Text>
-                <View style={{ height: 100 }} />
-            </ScrollView>
-        </View>
+                    <Text style={styles.footerText}>Selly v1.0.5 Premium Redesign</Text>
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            </View>
+        </SwipeWrapper>
     );
 }
 
@@ -218,18 +221,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#F2F2F7'
+        borderBottomColor: Colors.light.surfaceHighlight
     },
-    headerTitle: { fontSize: 24, fontWeight: '900', color: '#1C1C1E', letterSpacing: -0.5 },
-    editBtn: { backgroundColor: '#F8F9FB', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
-    editBtnText: { fontSize: 13, color: '#1C1C1E', fontWeight: '800' },
+    headerTitle: { fontSize: 24, fontWeight: '900', color: Colors.light.text, letterSpacing: -0.5 },
+    editBtn: { backgroundColor: Colors.light.surface, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+    editBtnText: { fontSize: 13, color: Colors.light.text, fontWeight: '800' },
 
     scroll: { paddingBottom: 40 },
 
     profileCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F8F9FB',
+        backgroundColor: Colors.light.surface,
         marginHorizontal: 24,
         marginTop: 24,
         padding: 24,
@@ -237,19 +240,19 @@ const styles = StyleSheet.create({
     },
     profileCardEditing: { backgroundColor: '#FEFBF8', borderWidth: 1, borderColor: Colors.light.primary + '30' },
     avatarContainer: { marginRight: 20, position: 'relative' },
-    avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: '#FEFBF8', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+    avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: Colors.light.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     avatarImage: { width: '100%', height: '100%' },
     cameraBadge: { display: 'none', position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
     profileInfo: { flex: 1 },
-    userName: { fontSize: 20, fontWeight: '900', color: '#1C1C1E' },
-    userEmail: { fontSize: 14, color: '#8E8E93', fontWeight: '500', marginTop: 2 },
+    userName: { fontSize: 20, fontWeight: '900', color: Colors.light.text },
+    userEmail: { fontSize: 14, color: Colors.light.icon, fontWeight: '500', marginTop: 2 },
 
     editForm: { gap: 8 },
-    input: { backgroundColor: '#F2F2F7', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, fontSize: 14, fontWeight: '600', color: '#1C1C1E' },
+    input: { backgroundColor: Colors.light.surfaceHighlight, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, fontSize: 14, fontWeight: '600', color: Colors.light.text },
 
-    sectionHeader: { marginHorizontal: 28, marginTop: 32, marginBottom: 12, fontSize: 11, fontWeight: '800', color: '#C7C7CC', letterSpacing: 1 },
-    section: { backgroundColor: '#FEFBF8', marginHorizontal: 24, borderRadius: 28, borderWidth: 1, borderColor: '#F2F2F7', overflow: 'hidden' },
+    sectionHeader: { marginHorizontal: 28, marginTop: 32, marginBottom: 12, fontSize: 11, fontWeight: '800', color: '#BDB9B0', letterSpacing: 1 },
+    section: { backgroundColor: Colors.light.background, marginHorizontal: 24, borderRadius: 28, borderWidth: 1, borderColor: Colors.light.surfaceHighlight, overflow: 'hidden' },
 
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
     rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },

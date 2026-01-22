@@ -16,7 +16,7 @@ export const SCRIPTS = {
     })();
   `,
 
-    // Fills a generic form with Item Data and Images
+    // Generic Configurable Auto-Fill
     AUTO_COMPILE: (item: {
         title: string;
         price: string;
@@ -28,56 +28,36 @@ export const SCRIPTS = {
         color?: string;
         material?: string;
         images?: string[]
-    }) => `
+    }, selectors: any) => `
     (async function() {
       try {
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        const config = ${JSON.stringify(selectors || {})};
+        
+        console.log('✅ Injected Auto-Fill with config:', config);
 
-        // "Smart Heuristic" Engine: No AI, just fuzzy logic matching
-        function findBestInput(keywords, type = 'input') {
-            const candidates = Array.from(document.querySelectorAll(type));
-            let bestMatch = null;
-            let maxScore = 0;
-
-            candidates.forEach(el => {
-                if (el.offsetParent === null) return; // Skip hidden
-                if (el.type === 'hidden' || el.type === 'checkbox' || el.type === 'radio' || el.type === 'submit') return;
-
-                let score = 0;
-                const attr = (el.id + ' ' + el.name + ' ' + el.placeholder + ' ' + (el.getAttribute('aria-label')||'')).toLowerCase();
-                
-                keywords.forEach(kw => {
-                    if (attr.includes(kw)) score += 5;
-                    if (attr === kw) score += 10;
-                });
-
-                // Bonus for standard attributes
-                if (type === 'textarea' && attr.includes('desc')) score += 5;
-                if (type === 'input' && attr.includes('price')) score += 5;
-
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestMatch = el;
-                }
-            });
-            return bestMatch;
-        }
-
-        function scrubPrice(val) {
-            if (!val) return '';
-            // Remove Euro symbol or other currency if present to avoid doubling
-            return val.replace(/[^0-9.,]/g, '').trim();
-        }
-
-        async function fill(el, value) {
-            if (!el) return;
+        // Helper to find element by multiple selectors
+        function findElement(selConfig) {
+            if (!selConfig) return null;
+            let el = null;
             
-            // Focus and click to trigger any activation handlers
+            // Try Main Selector
+            if (selConfig.main) {
+                el = document.querySelector(selConfig.main);
+            }
+            // Try Backup Selector
+            if (!el && selConfig.backup) {
+                el = document.querySelector(selConfig.backup);
+            }
+            return el;
+        }
+
+        async function fillInput(el, value) {
+            if (!el) return;
             el.focus();
             el.click();
             await sleep(50);
-
-            // Set value using property descriptor to bypass some React internal interceptions
+            
             try {
                 const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
                     el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
@@ -87,215 +67,118 @@ export const SCRIPTS = {
             } catch (e) {
                 el.value = value;
             }
-
-            // Dispatch events to notify the framework (React/Vue/etc)
+            
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.dispatchEvent(new Event('change', { bubbles: true }));
-            
-            // Extra events for some libraries
-            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-            
-            await sleep(50);
+            await sleep(100);
             el.blur();
         }
 
-        async function fillCategory(category) {
-            if (!category) return;
-            console.log('Filling category:', category);
-            
-            // Vinted: Extreme Category Handling
-            if (window.location.host.includes('vinted')) {
-                try {
-                    const selectors = ['[name="catalog_id"]', '.catalog-select', '[aria-label*="categoria"]', '.v-select__selection'];
-                    let btn = null;
-                    for (const s of selectors) {
-                        btn = document.querySelector(s);
-                        if (btn) break;
-                    }
-                    if (btn) {
-                        btn.click();
-                        await sleep(600);
-                        // Vinted often has search in the dropdown
-                        const searchInput = document.querySelector('input[placeholder*="cerca"], input[placeholder*="search"], .v-input__field');
-                        if (searchInput) {
-                            await fill(searchInput, category);
-                            await sleep(800);
-                            // Find best match in suggestions
-                            const suggestions = Array.from(document.querySelectorAll('li, .v-list-item, .v-select__option'));
-                            const best = suggestions.find(s => s.innerText.toLowerCase().includes(category.toLowerCase()));
-                            if (best) {
-                                best.click();
-                                await sleep(400);
-                                // Sometimes it's a 2-level menu
-                                const secondary = Array.from(document.querySelectorAll('li, .v-list-item')).find(s => s.innerText.toLowerCase().includes(category.toLowerCase()));
-                                if (secondary) secondary.click();
-                            }
-                        }
-                    }
-                } catch (e) { console.log('Vinted category error', e); }
-            }
-            
-            // eBay: Category suggestion
-            if (window.location.host.includes('ebay')) {
-                try {
-                    const searchBox = document.querySelector('#category-search-box, [aria-label*="category"], input[name*="category"]');
-                    if (searchBox) {
-                        await fill(searchBox, category);
-                        await sleep(1000);
-                        const suggest = document.querySelector('.category-suggestion, .suggest-item, .category-search-results li');
-                        if (suggest) suggest.click();
-                    }
-                } catch (e) {}
-            }
+        async function handleAction(key, value) {
+             const fieldConfig = config[key];
+             if (!fieldConfig || !value) return;
 
-            // Subito: Category tree
-            if (window.location.host.includes('subito')) {
-                try {
-                    // Category Selection on Subito can be a large list or a series of cards
-                    const catItems = Array.from(document.querySelectorAll('.category-item, [class*="CategoryItem"], .tag, li, button'));
-                    const bestCat = catItems.find(el => el.innerText.toLowerCase().includes(category.toLowerCase()));
-                    if (bestCat) {
-                        bestCat.click();
-                        await sleep(800);
-                        // Sometimes there is a 'Confirm' or 'Next' button after category
-                        const nextBtn = document.querySelector('button[type="submit"], .next-button, [class*="Button-primary"]');
-                        if (nextBtn && nextBtn.innerText.toLowerCase().includes('continua')) nextBtn.click();
-                    }
+             const el = findElement(fieldConfig);
+             if (!el) {
+                 console.log('Element not found for:', key);
+                 return;
+             }
+             
+             console.log('Processing:', key, fieldConfig.type, value);
 
-                    // Field Selectors for Subito Listing Page
-                    await fillField(['title', 'subject', 'nome oggetto'], ${JSON.stringify(item.title)});
-                    await fillField(['description', 'testo dell', 'corpo'], ${JSON.stringify(item.description)}, 'textarea');
-                    await fillField(['price', 'prezzo'], scrubPrice(${JSON.stringify(item.price)}));
-                } catch (e) { console.log('Subito error', e); }
-            }
+             switch (fieldConfig.type) {
+                 case 'text':
+                 case 'number': // Treat number as text input
+                     await fillInput(el, value);
+                     break;
+                 
+                 case 'dropdown_click':
+                 case 'click':
+                     // Just click the element (usually opens a dropdown)
+                     // Logic for selecting the specific item inside would be complex to genericize perfectly without more config
+                     // For now simple click to open
+                     el.click();
+                     break;
+
+                 case 'search_select':
+                     // Type and then click result? (Simplified for now)
+                     await fillInput(el, value);
+                     // Simulate Enter?
+                     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                     break;
+                 
+                 case 'visual_click':
+                    // Click a visual element (like package size)
+                     el.click();
+                     break;
+             }
         }
 
-        async function fillField(keywords, value, type = 'input') {
-            if (!value) return;
-            console.log('Filling field:', keywords[0], 'with', value);
-            const input = findBestInput(keywords, type);
-            if (input) await fill(input, value);
-        }
+        // --- EXECUTION LOOP ---
+        
+        // 1. Text Fields
+        await handleAction('titolo', ${JSON.stringify(item.title)});
+        await sleep(200);
+        await handleAction('descrizione', ${JSON.stringify(item.description)});
+        await sleep(200);
+        
+        // Scrub price before sending
+        const cleanPrice = ${JSON.stringify(item.price)}.replace(/[^0-9.,]/g, '').trim();
+        await handleAction('prezzo', cleanPrice);
+        await sleep(200);
 
-        async function fillAllText() {
-            console.log('Filling text fields...');
-            
-            // 0. Category & Title (Critical)
-            await fillCategory(${JSON.stringify(item.category)});
-            await sleep(300);
-            
-            await fillField(['title', 'titolo', 'subject', 'nome', 'name', 'what'], ${JSON.stringify(item.title)});
-            await sleep(200);
+        // 2. Dropdowns (Best Effort)
+        // Note: The mapping keys here must match the keys in the JSON keys
+        await handleAction('categoria', ${JSON.stringify(item.category)});
+        await handleAction('brand', ${JSON.stringify(item.brand)});
+        await handleAction('condizione', ${JSON.stringify(item.condition)});
+        await handleAction('colore', ${JSON.stringify(item.color)});
+        
+        // Special case: Package size (usually logic based, here hardcoded default or just click configured)
+        await handleAction('dimensione_pacco', 'default'); 
 
-            // 1. Price (Robust)
-            const cleanPrice = scrubPrice(${JSON.stringify(item.price)});
-            if (cleanPrice) {
-                console.log('Attempting to fill price:', cleanPrice);
-                await fillField(['price', 'prezzo', 'euro', 'amount', 'cifra', 'value', 'totale'], cleanPrice);
-                
-                // Backup Specific Selector for Vinted/eBay/Subito
-                const extraSelectors = [
-                    'input[name="price"]', 'input[id="price"]', 
-                    'input[aria-label*="Prezzo"]', 'input[aria-label*="Price"]', 
-                    'input[placeholder*="€"]', 'input[placeholder*="0,00"]',
-                    '[data-testid*="price"]', '.v-input__field--price'
-                ];
-                for (const sel of extraSelectors) {
-                    const el = document.querySelector(sel);
-                    if (el && !el.value) await fill(el, cleanPrice);
-                }
-            }
-            
-            // 2. Brand & Size
-            await fillField(['brand', 'marca', 'designer'], ${JSON.stringify(item.brand)});
-            await fillField(['size', 'taglia', 'misura', 'dimensione'], ${JSON.stringify(item.size)});
-            
-            // 3. Condition & Color
-            await fillField(['condition', 'stato', 'condizione'], ${JSON.stringify(item.condition)});
-            await fillField(['color', 'colore', 'tinta'], ${JSON.stringify(item.color)});
-
-            // 4. Description (Last to avoid reset)
-            await fillField(['desc', 'body', 'testo', 'info', 'text'], ${JSON.stringify(item.description)}, 'textarea');
-        }
-
-        console.log('Starting Flippo Persistent Auto-Fill...');
-
-        // FIRST PASS: Fill text immediately
-        await fillAllText();
-
-        await sleep(500);
-
-        // IMAGE PASS: Inject images
+        // 3. Images
         const images = ${JSON.stringify(item.images || [])};
-        if (images && images.length > 0) {
-            try {
-                const dropZoneSelectors = [
-                    '.drag-drop__input', 'input[type="file"]', '.upload-zone', 
-                    '.uploader', '.image-upload-container', '[aria-label*="upload"]',
-                    '[aria-label*="carica"]', '#photos-upload', '[data-testid="file-input"]'
-                ];
-                
-                let target = null;
-                for (const sel of dropZoneSelectors) {
-                    target = document.querySelector(sel);
-                    if (target) break;
-                }
-
-                if (target) {
+        const photoConfig = config['foto_input'];
+        
+        if (images.length > 0 && photoConfig) {
+             const fileInput = findElement(photoConfig);
+             if (fileInput) {
+                 try {
                     const files = await Promise.all(images.map(async (b64, i) => {
-                        try {
-                            const parts = b64.split(';base64,');
-                            const contentType = parts[0].split(':')[1];
-                            const raw = window.atob(parts[1]);
-                            const rawLength = raw.length;
-                            const uInt8Array = new Uint8Array(rawLength);
-                            for (let j = 0; j < rawLength; ++j) {
-                                uInt8Array[j] = raw.charCodeAt(j);
-                            }
-                            const blob = new Blob([uInt8Array], { type: contentType });
-                            return new File([blob], 'image_' + i + '.jpg', { type: contentType });
-                        } catch (e) { 
-                            console.error('Image processing error', e);
-                            return null; 
+                        const parts = b64.split(';base64,');
+                        const contentType = parts[0].split(':')[1];
+                        const raw = window.atob(parts[1]);
+                        const uInt8Array = new Uint8Array(raw.length);
+                        for (let j = 0; j < raw.length; ++j) {
+                            uInt8Array[j] = raw.charCodeAt(j);
                         }
+                        return new File([new Blob([uInt8Array], { type: contentType })], 'img_'+i+'.jpg', { type: contentType });
                     }));
 
-                    const validFiles = files.filter(f => f !== null);
                     const dataTransfer = new DataTransfer();
-                    validFiles.forEach(file => dataTransfer.items.add(file));
-
-                    const dropEvent = new DragEvent('drop', {
-                        bubbles: true,
-                        cancelable: true,
-                        dataTransfer: dataTransfer
-                    });
+                    files.forEach(f => dataTransfer.items.add(f));
                     
-                    if (target.tagName === 'INPUT' && target.type === 'file') {
-                        Object.defineProperty(target, 'files', { value: dataTransfer.files, writable: false });
-                        target.dispatchEvent(new Event('change', { bubbles: true }));
+                    if (fileInput.tagName === 'INPUT' && fileInput.type === 'file') {
+                        Object.defineProperty(fileInput, 'files', { value: dataTransfer.files, writable: false });
+                        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
-                        target.dispatchEvent(dropEvent);
+                         // Drag Drop simulation if configured? (out of scope for now)
                     }
                     console.log('Images injected');
-                }
-            } catch (e) { console.error('Image injection error', e); }
+                 } catch (e) {
+                     console.error('Image Error', e);
+                 }
+             }
         }
 
-        // WAIT AND RE-FILL: Some SPAs reset forms when images are added
-        // We wait for the potential state reset to happen, then fill again.
-        await sleep(2000); 
-        console.log('Second pass to persist text...');
-        await fillAllText();
-
-        const msg = '✅ Auto-Fill Persistent Completed';
+        const msg = '✅ Auto-Fill Dynamic Completed';
         if (window.ReactNativeWebView) {
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: msg }));
         }
-        alert(msg);
-      } catch (globalError) {
-        console.error('Global injection error:', globalError);
-        alert('Injection Error: ' + globalError.message);
+      } catch (e) {
+        console.error('Script Error', e);
+        if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ERROR', message: e.message }));
       }
     })();
   `,
