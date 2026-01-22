@@ -52,8 +52,6 @@ export function SwipeableTabBar({ state, descriptors, navigation }: MaterialTopT
                         key={route.key}
                         accessibilityRole="button"
                         accessibilityState={isFocused ? { selected: true } : {}}
-                        accessibilityLabel={options.tabBarAccessibilityLabel}
-                        testID={options.tabBarTestID}
                         onPress={onPress}
                         onLongPress={onLongPress}
                         style={styles.tab}

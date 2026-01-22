@@ -23,30 +23,43 @@ export function SwipeWrapper({ children, leftRoute, rightRoute }: SwipeWrapperPr
     };
 
     const pan = Gesture.Pan()
-        .activeOffsetX([-20, 20]) // Only activate on horizontal movement
+        .activeOffsetX([-15, 15]) // More sensitive horizontal detection
+        .failOffsetY([-15, 15]) // Prevent conflicts with vertical scrolling
         .onUpdate((event) => {
             // Limit swipe distance for resistance effect if no route
             if (!leftRoute && event.translationX > 0) {
-                translateX.value = event.translationX * 0.3;
+                translateX.value = event.translationX * 0.15; // Increased resistance (was 0.2)
             } else if (!rightRoute && event.translationX < 0) {
-                translateX.value = event.translationX * 0.3;
+                translateX.value = event.translationX * 0.15; // Increased resistance (was 0.2)
             } else {
                 translateX.value = event.translationX;
             }
         })
         .onEnd((event) => {
-            const SWIPE_THRESHOLD = 80; // Distance required to trigger navigation
+            const SWIPE_THRESHOLD = 70; // Slightly lower threshold for easier navigation
+            const velocity = event.velocityX;
 
-            if (leftRoute && event.translationX > SWIPE_THRESHOLD) {
+            // Consider velocity for more natural feel
+            // Fast swipe = easier to trigger navigation
+            const velocityBoost = Math.abs(velocity) > 500 ? 20 : 0;
+            const effectiveDistance = Math.abs(event.translationX) + velocityBoost;
+
+            if (leftRoute && event.translationX > 0 && effectiveDistance > SWIPE_THRESHOLD) {
                 // Swipe Right -> Go Left (Previous Tab)
                 runOnJS(navigate)(leftRoute);
-            } else if (rightRoute && event.translationX < -SWIPE_THRESHOLD) {
+            } else if (rightRoute && event.translationX < 0 && effectiveDistance > SWIPE_THRESHOLD) {
                 // Swipe Left -> Go Right (Next Tab)
                 runOnJS(navigate)(rightRoute);
             }
 
-            // Spring back to center
-            translateX.value = withSpring(0);
+            // Much slower, controlled spring animation
+            translateX.value = withSpring(0, {
+                damping: 20,         // Balanced damping
+                stiffness: 120,      // MUCH slower response
+                mass: 1,
+                overshootClamping: true,  // PREVENT OVERSHOOT (Critical for stability)
+                velocity: velocity < 2000 ? velocity : 0, // Cap velocity
+            });
         });
 
     const animatedStyle = useAnimatedStyle(() => ({

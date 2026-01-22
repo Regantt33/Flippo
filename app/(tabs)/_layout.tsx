@@ -23,7 +23,11 @@ export default function TabLayout() {
         },
         tabBarItemStyle: {
           // kept default
-        }
+        },
+        // Performance optimizations
+        lazy: true, // Only render screens when they become active
+        // Animation configuration for smooth transitions
+        animation: 'shift', // Smooth slide animation between tabs
       }}>
       <Tabs.Screen
         name="index"
