@@ -9,9 +9,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
+    const insets = useSafeAreaInsets();
     const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -71,7 +73,11 @@ export default function ProfileScreen() {
     return (
         <SwipeWrapper leftRoute="/(tabs)/browser">
             <View style={styles.container}>
-                <View style={styles.header}>
+                {/* Decorative Background Elements */}
+                <View style={styles.bgDecoration1} />
+                <View style={styles.bgDecoration2} />
+
+                <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
                     <Text style={styles.headerTitle}>Impostazioni</Text>
                     <PremiumButton style={styles.editBtn} onPress={() => editing ? handleSaveProfile() : setEditing(true)}>
                         <Text style={styles.editBtnText}>{editing ? 'Fine' : 'Modifica'}</Text>
@@ -85,7 +91,7 @@ export default function ProfileScreen() {
                 >
                     {/* 1. Profile Card */}
                     <View style={[styles.profileCard, editing && styles.profileCardEditing]}>
-                        <PremiumButton onPress={handlePickAvatar} disabled={!editing} style={styles.avatarContainer}>
+                        <PremiumButton onPress={handlePickAvatar} disabled={!editing} style={[styles.avatarContainer, editing ? { opacity: 0.9 } : {}]}>
                             <View style={styles.avatar}>
                                 {profile.avatar ? (
                                     <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
@@ -156,7 +162,7 @@ export default function ProfileScreen() {
                                             <Switch
                                                 value={m.isEnabled}
                                                 onValueChange={(v) => toggleMarketplace(m.id, v)}
-                                                trackColor={{ false: '#F2F2F7', true: Colors.light.primary }}
+                                                trackColor={{ false: '#F2F2F7', true: Colors.light.accent }}
                                             />
                                         </View>
                                     </View>
@@ -195,7 +201,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FEFBF8' },
     header: {
-        paddingTop: 60,
         paddingBottom: 20,
         paddingHorizontal: 24,
         flexDirection: 'row',
@@ -220,11 +225,11 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.xxl,
         ...Shadows.md,
     },
-    profileCardEditing: { backgroundColor: '#FEFBF8', borderWidth: 1, borderColor: Colors.light.primary + '30' },
+    profileCardEditing: { backgroundColor: '#FEFBF8', borderWidth: 1, borderColor: Colors.light.accent + '30' },
     avatarContainer: { marginRight: 20, position: 'relative' },
     avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: Colors.light.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     avatarImage: { width: '100%', height: '100%' },
-    cameraBadge: { display: 'none', position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+    cameraBadge: { display: 'none', position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.light.accent, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
 
     profileInfo: { flex: 1 },
     userName: { fontSize: 20, fontWeight: '900', color: Colors.light.text },
@@ -259,12 +264,32 @@ const styles = StyleSheet.create({
     rowTitle: { fontSize: 16, fontWeight: '800', color: '#1C1C1E' },
     rowStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '600', marginTop: 1 },
 
-    loginBtn: { backgroundColor: Colors.light.primary + '15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 12 },
-    loginBtnText: { color: Colors.light.primary, fontSize: 12, fontWeight: '800' },
+    loginBtn: { backgroundColor: Colors.light.accent + '15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 12 },
+    loginBtnText: { color: Colors.light.accent, fontSize: 12, fontWeight: '800' },
 
     actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
     actionText: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
     divider: { height: 1, backgroundColor: '#F2F2F7', marginHorizontal: 20 },
 
-    footerText: { textAlign: 'center', marginTop: 40, color: '#C7C7CC', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }
+    footerText: { textAlign: 'center', marginTop: 40, color: '#C7C7CC', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+    bgDecoration1: {
+        position: 'absolute',
+        top: 20,
+        left: -30,
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        backgroundColor: 'rgba(214, 109, 69, 0.03)',
+        zIndex: -1,
+    },
+    bgDecoration2: {
+        position: 'absolute',
+        bottom: 120,
+        right: -40,
+        width: 220,
+        height: 220,
+        borderRadius: 110,
+        backgroundColor: 'rgba(214, 109, 69, 0.02)',
+        zIndex: -1,
+    },
 });

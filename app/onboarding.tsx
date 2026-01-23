@@ -162,7 +162,7 @@ export default function OnboardingScreen() {
                 {marketplaces.map((m) => (
                     <PremiumButton
                         key={m.id}
-                        style={[styles.marketCard, m.isLoggedIn ? { opacity: 0.7 } : {}]}
+                        style={[styles.marketCard, m.isLoggedIn ? { borderColor: Colors.light.accent, backgroundColor: Colors.light.accent + '05' } : {}]}
                         onPress={() => m.isLoggedIn ? null : openLogin(m.id)}
                         disabled={m.isLoggedIn}
                     >

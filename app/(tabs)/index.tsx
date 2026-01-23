@@ -1,5 +1,4 @@
 import { AnimatedCard } from '@/components/AnimatedCard';
-import { GradientCard } from '@/components/GradientCard';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { BorderRadius, Colors, Gradients, Shadows, Spacing, Typography } from '@/constants/Colors';
@@ -137,23 +136,24 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* Premium Stats Row */}
-          <View style={styles.statsGrid}>
-            <View style={styles.statsRow}>
-              <GradientCard variant="accent" style={styles.statCardSmall}>
-                <FontAwesome name="shopping-bag" size={18} color="#FFF" style={{ marginBottom: 8 }} />
-                <View style={styles.counterRow}>
+          {/* Premium Stats Overview */}
+          <View style={styles.statsOverviewContainer}>
+            <View style={styles.statsOverview}>
+              <View style={styles.statInfoBlock}>
+                <Text style={styles.statLabelBig}>PRODOTTI ATTIVI</Text>
+                <View style={styles.statValueRow}>
+                  <FontAwesome name="shopping-bag" size={16} color={Colors.light.accent} style={{ marginRight: 10 }} />
                   <AnimatedCounter value={stats.active} />
-                  <Text style={[styles.statLabelSmall, { color: 'rgba(255,255,255,0.8)' }]}> ATTIVI</Text>
                 </View>
-              </GradientCard>
-              <GradientCard variant="surface" style={styles.statCardSmall}>
-                <FontAwesome name="file-text-o" size={18} color={Colors.light.text} style={{ marginBottom: 8 }} />
-                <View style={styles.counterRow}>
+              </View>
+              <View style={styles.statsDivider} />
+              <View style={styles.statInfoBlock}>
+                <Text style={styles.statLabelBig}>BOZZE IN CORSO</Text>
+                <View style={styles.statValueRow}>
+                  <FontAwesome name="file-text-o" size={16} color={Colors.light.icon} style={{ marginRight: 10 }} />
                   <AnimatedCounter value={stats.draft} />
-                  <Text style={styles.statLabelSmall}> BOZZE</Text>
                 </View>
-              </GradientCard>
+              </View>
             </View>
           </View>
 
@@ -313,46 +313,40 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
 
-  // Premium Stats Grid
-  statsGrid: {
+  // Stats Redesign
+  statsOverviewContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.xl,
-    gap: 16,
   },
-  statCardLarge: {
-    padding: Spacing.lg,
-    alignItems: 'center',
-    minHeight: 160,
-    justifyContent: 'center',
-  },
-  statIcon: {
-    marginBottom: 12,
-  },
-  statLabel: {
-    ...Typography.caption,
-    color: Colors.light.icon,
-    marginTop: 8,
-    textTransform: 'uppercase',
-  },
-  statsRow: {
+  statsOverview: {
     flexDirection: 'row',
-    gap: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.xxl,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    ...Shadows.sm,
   },
-  statCardSmall: {
+  statInfoBlock: {
     flex: 1,
-    padding: Spacing.md,
-    alignItems: 'center',
-    minHeight: 120,
-    justifyContent: 'center',
   },
-  statLabelSmall: {
-    ...Typography.label,
-    color: Colors.light.icon,
+  statLabelBig: {
     fontSize: 10,
+    fontWeight: '800',
+    color: '#BDB9B0',
+    letterSpacing: 1.2,
+    marginBottom: 8,
   },
-  counterRow: {
+  statValueRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+  },
+  statsDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#F0F0F0',
+    marginHorizontal: 20,
   },
   // Filters
   filterBar: { gap: 12, marginBottom: Spacing.md, paddingHorizontal: Spacing.lg, paddingRight: 40 },

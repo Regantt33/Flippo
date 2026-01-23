@@ -11,12 +11,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 export default function BrowserScreen() {
     const params = useLocalSearchParams();
     const router = useRouter();
     const webViewRef = useRef<WebView>(null);
+    const insets = useSafeAreaInsets();
 
     // State
     const [url, setUrl] = useState<string>('');
@@ -179,7 +181,11 @@ export default function BrowserScreen() {
         return (
             <SwipeWrapper leftRoute="/(tabs)/inventory" rightRoute="/(tabs)/profile">
                 <View style={styles.container}>
-                    <View style={styles.hubHeader}>
+                    {/* Decorative Background Elements */}
+                    <View style={styles.bgDecoration1} />
+                    <View style={styles.bgDecoration2} />
+
+                    <View style={[styles.hubHeader, { paddingTop: Math.max(insets.top, 20) }]}>
                         <Text style={styles.hubTitle}>Selly Hub</Text>
                         <Text style={styles.hubSubtitle}>Gestione annunci diretta</Text>
                     </View>
@@ -199,7 +205,7 @@ export default function BrowserScreen() {
                                 return (
                                     <PremiumButton
                                         key={m.id}
-                                        style={connected ? [styles.marketCard, { opacity: 0.8 }] : styles.marketCard}
+                                        style={[styles.marketCard, currentSite === m.id ? styles.marketCardActive : {}]}
                                         onPress={() => handleMarketSelection(m)}
                                     >
                                         <MarketplaceLogo id={m.id} style={styles.marketLogo} />
@@ -227,7 +233,7 @@ export default function BrowserScreen() {
         <SwipeWrapper leftRoute="/(tabs)/inventory" rightRoute="/(tabs)/profile">
             <View style={styles.container}>
                 {/* Quick Switcher Bar / Onboarding Header - COMPACT */}
-                <View style={styles.browserHeader}>
+                <View style={[styles.browserHeader, { paddingTop: Math.max(insets.top, 10) }]}>
                     {isFromOnboarding ? (
                         <View style={styles.onboardingHeader}>
                             <PremiumButton style={styles.backBtn} onPress={() => router.replace('/onboarding?step=3')}>
@@ -250,7 +256,7 @@ export default function BrowserScreen() {
                                 {marketplaces.map(m => (
                                     <PremiumButton
                                         key={m.id}
-                                        style={currentSite === m.id ? styles.switcherChipActive : styles.switcherChip}
+                                        style={[styles.switcherChip, currentSite === m.id ? styles.switcherChipActive : {}]}
                                         onPress={() => handleMarketSelection(m)}
                                     >
                                         <Text style={[styles.switcherText, currentSite === m.id && styles.switcherTextActive]}>
@@ -399,7 +405,7 @@ export default function BrowserScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FEFBF8' },
 
-    hubHeader: { paddingHorizontal: 24, paddingTop: 60, marginBottom: 32 },
+    hubHeader: { paddingHorizontal: 24, marginBottom: 32 },
     hubTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
     hubSubtitle: { fontSize: 16, color: Colors.light.icon, fontWeight: '500', marginTop: 4 },
 
@@ -413,7 +419,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         borderWidth: 1,
         borderColor: Colors.light.surfaceHighlight,
-        ...Shadows.lg,
+        ...Shadows.md,
+    },
+    marketCardActive: {
+        borderColor: Colors.light.accent,
+        backgroundColor: Colors.light.accent + '05',
+        ...Shadows.accent,
     },
     marketLogo: { width: 52, height: 52, borderRadius: 14, marginRight: 16 },
     marketInfo: { flex: 1 },
@@ -429,7 +440,7 @@ const styles = StyleSheet.create({
     settingsBtnText: { color: '#FFF', fontWeight: '700' },
 
     // Compact Browser Styles
-    browserHeader: { backgroundColor: Colors.light.background, borderBottomWidth: 1, borderBottomColor: Colors.light.surfaceHighlight, paddingTop: 40 }, // Reduced top padding
+    browserHeader: { backgroundColor: Colors.light.background, borderBottomWidth: 1, borderBottomColor: Colors.light.surfaceHighlight }, // Reduced top padding
     onboardingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12 },
     backBtn: { flexDirection: 'row', alignItems: 'center', padding: 8, backgroundColor: Colors.light.surface, borderRadius: 12 },
     backText: { color: Colors.light.text, fontSize: 14, fontWeight: '700', marginLeft: 4 },
@@ -438,7 +449,7 @@ const styles = StyleSheet.create({
     switcherScroll: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8, alignItems: 'center' },
     homeBtn: { padding: 10, backgroundColor: Colors.light.surface, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
     switcherChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
-    switcherChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
+    switcherChipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent, ...Shadows.accent },
     switcherText: { fontSize: 13, fontWeight: '600', color: Colors.light.icon },
     switcherTextActive: { color: '#FFF' },
 
@@ -492,5 +503,25 @@ const styles = StyleSheet.create({
     itemThumb: { width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.light.background, marginRight: 16 },
     itemMeta: { flex: 1 },
     itemName: { fontSize: 15, fontWeight: '700', color: Colors.light.text },
-    itemPrice: { fontSize: 13, color: Colors.light.icon, fontWeight: '700' }
+    itemPrice: { fontSize: 13, color: Colors.light.icon, fontWeight: '700' },
+    bgDecoration1: {
+        position: 'absolute',
+        top: -40,
+        right: -30,
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+        backgroundColor: 'rgba(214, 109, 69, 0.03)',
+        zIndex: -1,
+    },
+    bgDecoration2: {
+        position: 'absolute',
+        bottom: 100,
+        left: -50,
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: 'rgba(214, 109, 69, 0.02)',
+        zIndex: -1,
+    },
 });
