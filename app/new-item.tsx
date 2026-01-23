@@ -10,6 +10,8 @@ import { Alert, Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressabl
 
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 
+// --- PREMIUM COMPONENTS ---
+
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const PremiumButton = ({ onPress, children, style, disabled }: any) => {
@@ -30,21 +32,40 @@ const PremiumButton = ({ onPress, children, style, disabled }: any) => {
     );
 };
 
-const CATEGORIES: { id: InventoryCategory; label: string; icon: any }[] = [
-    { id: 'Fashion', label: 'Moda', icon: 'tag' },
-    { id: 'Shoes', label: 'Scarpe', icon: 'bolt' },
-    { id: 'Bags', label: 'Borse', icon: 'shopping-bag' },
-    { id: 'Accessories', label: 'Accessori', icon: 'magic' },
-    { id: 'Electronics', label: 'Tech', icon: 'laptop' },
-    { id: 'Small Tech', label: 'Gadget', icon: 'mobile' },
-    { id: 'Videogames', label: 'Gaming', icon: 'gamepad' },
-    { id: 'Home', label: 'Casa', icon: 'home' },
-    { id: 'Entertainment', label: 'Media', icon: 'music' },
-    { id: 'Beauty', label: 'Beauty', icon: 'heart' },
-    { id: 'Sports', label: 'Sport', icon: 'soccer-ball-o' },
-    { id: 'Collectibles', label: '希少', icon: 'diamond' },
-    { id: 'Motors', label: 'Auto', icon: 'car' },
-    { id: 'Other', label: 'Altro', icon: 'cube' },
+const SectionHeader = ({ icon, title }: { icon: any, title: string }) => (
+    <View style={styles.sectionHeaderContainer}>
+        <FontAwesome name={icon} size={14} color={Colors.light.accent} style={{ marginRight: 8 }} />
+        <Text style={styles.sectionHeaderText}>{title}</Text>
+    </View>
+);
+
+// --- LOGIC & CONSTANTS ---
+
+// Comprehensive Categories
+const CATEGORIES: { id: InventoryCategory; label: string; icon: any; subtext?: string }[] = [
+    { id: 'Fashion', label: 'Moda', icon: 'tag', subtext: 'Abbigliamento, Scarpe' },
+    { id: 'Shoes', label: 'Scarpe', icon: 'bolt', subtext: 'Sneakers, Classiche' },
+    { id: 'Bags', label: 'Borse', icon: 'shopping-bag', subtext: 'Zaini, Valigie' },
+    { id: 'Accessories', label: 'Accessori', icon: 'magic', subtext: 'Gioielli, Orologi' },
+    { id: 'Electronics', label: 'Elettronica', icon: 'mobile', subtext: 'Telefoni, PC' },
+    { id: 'Videogames', label: 'Gaming', icon: 'gamepad', subtext: 'Console, Giochi' },
+    { id: 'Collectibles', label: 'Collezionismo', icon: 'diamond', subtext: 'Carte, Lego' },
+    { id: 'Home', label: 'Casa', icon: 'home', subtext: 'Arredo, Cucina' },
+    { id: 'Entertainment', label: 'Media', icon: 'music', subtext: 'Libri, DVD' },
+    { id: 'Beauty', label: 'Beauty', icon: 'heart', subtext: 'Cosmetici' },
+    { id: 'Sports', label: 'Sport', icon: 'soccer-ball-o', subtext: 'Attrezzatura' },
+    { id: 'Pets', label: 'Animali', icon: 'paw', subtext: 'Accessori' },
+    { id: 'Motors', label: 'Motori', icon: 'car', subtext: 'Auto, Moto, Ricambi' },
+    { id: 'Other', label: 'Altro', icon: 'cube', subtext: 'Varie' },
+];
+
+const CONDITIONS = [
+    'Nuovo con cartellino',
+    'Nuovo senza cartellino',
+    'Ottimo',
+    'Buono',
+    'Discreto',
+    'Da restaurare'
 ];
 
 export default function NewItemScreen() {
@@ -63,13 +84,13 @@ export default function NewItemScreen() {
     const [brand, setBrand] = useState('');
     const [condition, setCondition] = useState('');
     const [size, setSize] = useState('');
-    const [material, setMaterial] = useState('');
+
+    // Tech/Specifics
     const [model, setModel] = useState('');
-    const [specs, setSpecs] = useState('');
     const [platform, setPlatform] = useState('');
-    const [isbn, setIsbn] = useState('');
+
+    // Toggles
     const [hasBox, setHasBox] = useState(false);
-    const [hasPapers, setHasPapers] = useState(false);
     const [hasReceipt, setHasReceipt] = useState(false);
 
     // UI State
@@ -78,6 +99,7 @@ export default function NewItemScreen() {
     const [savedItemId, setSavedItemId] = useState<string | null>(null);
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
     const [connectedMarketplaces, setConnectedMarketplaces] = useState<string[]>([]);
+
     const isEditing = !!params.id;
 
     useFocusEffect(useCallback(() => {
@@ -116,13 +138,9 @@ export default function NewItemScreen() {
             setBrand(item.brand || '');
             setCondition(item.condition || '');
             setSize(item.size || '');
-            setMaterial(item.material || '');
             setModel(item.model || '');
-            setSpecs(item.specs || '');
             setPlatform(item.platform || '');
-            setIsbn(item.isbn || '');
             setHasBox(!!item.hasBox);
-            setHasPapers(!!item.hasPapers);
             setHasReceipt(!!item.hasReceipt);
         }
     };
@@ -132,13 +150,12 @@ export default function NewItemScreen() {
         const lowerTitle = title.toLowerCase();
         let detected = false;
 
-        if (lowerTitle.includes('ps5') || lowerTitle.includes('nintendo') || lowerTitle.includes('game')) { setCategory('Videogames'); detected = true; }
-        else if (lowerTitle.includes('iphone') || lowerTitle.includes('macbook')) { setCategory('Electronics'); detected = true; }
-        else if (lowerTitle.includes('lego')) { setCategory('Collectibles'); detected = true; }
-
-        ['nike', 'adidas', 'apple', 'samsung', 'zara', 'sony', 'gucci', 'lego'].forEach(b => {
-            if (lowerTitle.includes(b) && !brand) { setBrand(b.charAt(0).toUpperCase() + b.slice(1)); detected = true; }
-        });
+        // Simple heuristic detector for immediate feedback
+        if (lowerTitle.includes('ps5') || lowerTitle.includes('nintendo') || lowerTitle.includes('xbox')) { setCategory('Videogames'); detected = true; }
+        else if (lowerTitle.includes('iphone') || lowerTitle.includes('samsung') || lowerTitle.includes('macbook')) { setCategory('Electronics'); detected = true; }
+        else if (lowerTitle.includes('lego') || lowerTitle.includes('funko')) { setCategory('Collectibles'); detected = true; }
+        else if (lowerTitle.includes('crema') || lowerTitle.includes('profumo')) { setCategory('Beauty'); detected = true; }
+        else if (lowerTitle.includes('auto') || lowerTitle.includes('moto') || lowerTitle.includes('ricambi')) { setCategory('Motors'); detected = true; }
 
         if (detected) {
             setMagicActive(true);
@@ -147,11 +164,13 @@ export default function NewItemScreen() {
     };
 
     const handleAddPhoto = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
 
-        let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.8 });
-        if (!result.canceled) setImages([...images, result.assets[0].uri]);
+            let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
+            if (!result.canceled) setImages([...images, result.assets[0].uri]);
+        } catch (e) { console.error(e); }
     };
 
     const handleSave = async () => {
@@ -159,8 +178,8 @@ export default function NewItemScreen() {
 
         const itemData = {
             title, price, description, images, category,
-            brand, condition, size, material, model, specs, platform, isbn,
-            hasBox, hasPapers, hasReceipt, color: itemColor,
+            brand, condition, size, model, platform,
+            hasBox, hasReceipt, color: itemColor,
             quantity: parseInt(quantity) || 1,
             status
         };
@@ -179,6 +198,16 @@ export default function NewItemScreen() {
         const itemId = savedItemId || (params.id as string);
         if (!itemId) return;
 
+        // --- PLATFORM COMPATIBILITY CHECKS ---
+        if (platformId === 'vinted' && category === 'Motors') {
+            Alert.alert(
+                "Categoria non supportata",
+                "Vinted non supporta la vendita di Veicoli a motore.",
+                [{ text: "Ho capito" }]
+            );
+            return;
+        }
+
         setShowPublishWizard(false);
         router.push({
             pathname: '/(tabs)/browser',
@@ -186,18 +215,14 @@ export default function NewItemScreen() {
         });
     };
 
-    // Style Helpers
-    const isFashion = ['Fashion', 'Shoes', 'Bags', 'Accessories'].includes(category);
-    const isTech = ['Electronics', 'Small Tech'].includes(category);
-
     return (
         <View style={styles.container}>
-            {/* Header */}
+            {/* Header with Glass effect feel */}
             <View style={styles.header}>
                 <PremiumButton style={styles.headerBtn} onPress={() => router.back()}>
                     <FontAwesome name="chevron-left" size={16} color="#1C1C1E" />
                 </PremiumButton>
-                <Text style={styles.headerTitle}>{isEditing ? 'Modifica Oggetto' : 'Nuovo Oggetto'}</Text>
+                <Text style={styles.headerTitle}>{isEditing ? 'Modifica' : 'Nuovo Oggetto'}</Text>
                 <PremiumButton style={styles.saveBtn} onPress={handleSave}>
                     <Text style={styles.saveBtnText}>Salva</Text>
                 </PremiumButton>
@@ -207,14 +232,14 @@ export default function NewItemScreen() {
                 <ScrollView
                     style={styles.form}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: 120 }}
                 >
-                    {/* Image Area */}
+                    {/* 1. MEDIA SECTION */}
                     <View style={styles.imageSection}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageScroll}>
                             <PremiumButton style={styles.addPhotoCard} onPress={handleAddPhoto}>
                                 <View style={styles.addPhotoIcon}>
-                                    <FontAwesome name="camera" size={24} color={Colors.light.primary} />
+                                    <FontAwesome name="camera" size={24} color={Colors.light.accent} />
                                 </View>
                                 <Text style={styles.addPhotoText}>Aggiungi Foto</Text>
                             </PremiumButton>
@@ -229,130 +254,157 @@ export default function NewItemScreen() {
                         </ScrollView>
                     </View>
 
-                    {/* Category Carousel */}
+                    {/* 2. CATEGORY SELECTOR (GRID) */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>Categoria</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-                            {CATEGORIES.map(item => (
-                                <PremiumButton
-                                    key={item.id}
-                                    style={[styles.categoryCard, category === item.id && styles.categoryCardActive]}
-                                    onPress={() => setCategory(item.id)}
-                                >
-                                    <FontAwesome name={item.icon} size={18} color={category === item.id ? '#fff' : '#1C1C1E'} />
-                                    <Text style={[styles.categoryLabel, category === item.id && styles.categoryLabelActive]}>{item.label}</Text>
-                                </PremiumButton>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* Form Fields */}
-                    <View style={styles.card}>
-                        <Text style={styles.inputLabel}>Informazioni Principali</Text>
-                        <TextInput
-                            style={[styles.input, magicActive && styles.inputMagic]}
-                            placeholder="Cosa stai vendendo?"
-                            placeholderTextColor="#C7C7CC"
-                            value={title}
-                            onChangeText={setTitle}
-                            onBlur={runMiniAI}
-                        />
-
-                        <View style={styles.row}>
-                            <View style={[styles.inputContainer, { flex: 1, marginRight: 12 }]}>
-                                <Text style={styles.currency}>€</Text>
-                                <TextInput
-                                    style={styles.priceInput}
-                                    placeholder="0.00"
-                                    placeholderTextColor="#C7C7CC"
-                                    keyboardType="decimal-pad"
-                                    value={price}
-                                    onChangeText={setPrice}
-                                />
-                            </View>
-                            <View style={[styles.inputContainer, { flex: 1 }]}>
-                                <TextInput
-                                    style={styles.priceInput}
-                                    placeholder="Quantità"
-                                    placeholderTextColor="#C7C7CC"
-                                    keyboardType="number-pad"
-                                    value={quantity}
-                                    onChangeText={setQuantity}
-                                />
+                        <SectionHeader icon="tag" title="SELEZIONA CATEGORIA" />
+                        <View style={[styles.card, { padding: 16 }]}>
+                            {/* Grid Layout using flexWrap */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                {CATEGORIES.map(item => (
+                                    <PremiumButton
+                                        key={item.label}
+                                        style={[styles.catChip, category === item.id && styles.catChipActive]}
+                                        onPress={() => setCategory(item.id)}
+                                    >
+                                        <FontAwesome name={item.icon} size={14} color={category === item.id ? '#FFF' : '#1C1C1E'} />
+                                        <Text style={[styles.catText, category === item.id && styles.catTextActive]}>{item.label}</Text>
+                                    </PremiumButton>
+                                ))}
                             </View>
                         </View>
-
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            placeholder="Descrizione dettagliata..."
-                            placeholderTextColor="#C7C7CC"
-                            multiline
-                            numberOfLines={4}
-                            value={description}
-                            onChangeText={setDescription}
-                        />
                     </View>
 
-                    {/* Smart Details */}
-                    {(isFashion || isTech) && (
+                    {/* 3. MAIN INFO */}
+                    <View style={styles.section}>
+                        <SectionHeader icon="pencil" title="INFO PRINCIPALI" />
                         <View style={styles.card}>
-                            <Text style={styles.inputLabel}>Dettagli Tecnici</Text>
-                            <View style={styles.row}>
-                                <TextInput
-                                    style={[styles.input, { flex: 1, marginRight: 12 }]}
-                                    placeholder={isFashion ? "Taglia" : "Modello"}
-                                    placeholderTextColor="#C7C7CC"
-                                    value={isFashion ? size : model}
-                                    onChangeText={isFashion ? setSize : setModel}
-                                />
-                                <TextInput
-                                    style={[styles.input, { flex: 1 }]}
-                                    placeholder="Colore"
-                                    placeholderTextColor="#C7C7CC"
-                                    value={itemColor}
-                                    onChangeText={setItemColor}
-                                />
-                            </View>
+                            <Text style={styles.inputLabel}>Titolo Annuncio</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="Marca / Designer"
+                                style={[styles.inputLarge, magicActive && styles.inputMagic]}
+                                placeholder="Cosa vendi? (es. Nike Air Force 1)"
                                 placeholderTextColor="#C7C7CC"
-                                value={brand}
-                                onChangeText={setBrand}
+                                value={title}
+                                onChangeText={setTitle}
+                                onBlur={runMiniAI}
                             />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Condizione (es. Nuovo con cartellino)"
-                                placeholderTextColor="#C7C7CC"
-                                value={condition}
-                                onChangeText={setCondition}
-                            />
-                        </View>
-                    )}
 
-                    {/* Extra Settings */}
-                    <View style={styles.card}>
-                        <Text style={styles.inputLabel}>Altro</Text>
-                        <View style={styles.switchRow}>
-                            <Text style={styles.switchText}>Scatola Inclusa</Text>
-                            <Switch value={hasBox} onValueChange={setHasBox} trackColor={{ false: '#F2F2F7', true: Colors.light.primary }} />
-                        </View>
-                        <View style={styles.switchRow}>
-                            <Text style={styles.switchText}>Ricevuta/Garanzia</Text>
-                            <Switch value={hasReceipt} onValueChange={setHasReceipt} trackColor={{ false: '#F2F2F7', true: Colors.light.primary }} />
+                            <View style={{ height: 16 }} />
+
+                            {/* Price & Quantity ROW */}
+                            <View style={styles.row}>
+                                <View style={[styles.inputBox, { flex: 1, marginRight: 12 }]}>
+                                    <Text style={styles.inputLabel}>Prezzo (€)</Text>
+                                    <TextInput
+                                        style={styles.inputText}
+                                        placeholder="0.00"
+                                        keyboardType="decimal-pad"
+                                        value={price}
+                                        onChangeText={setPrice}
+                                    />
+                                </View>
+                                <View style={[styles.inputBox, { width: 100 }]}>
+                                    <Text style={styles.inputLabel}>Quantità</Text>
+                                    <TextInput
+                                        style={styles.inputText}
+                                        placeholder="1"
+                                        keyboardType="number-pad"
+                                        value={quantity}
+                                        onChangeText={setQuantity}
+                                    />
+                                </View>
+                            </View>
                         </View>
                     </View>
+
+                    {/* 4. DETAILS GRID */}
+                    <View style={styles.section}>
+                        <SectionHeader icon="sliders" title="SPECIFICHE" />
+                        <View style={styles.card}>
+                            {/* Conditions Selector */}
+                            <Text style={[styles.inputLabel, { marginBottom: 8 }]}>Condizioni</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
+                                {CONDITIONS.map(c => (
+                                    <PremiumButton
+                                        key={c}
+                                        style={[styles.condChip, condition === c && styles.condChipActive]}
+                                        onPress={() => setCondition(c)}
+                                    >
+                                        <Text style={[styles.condText, condition === c && styles.condTextActive]}>{c}</Text>
+                                    </PremiumButton>
+                                ))}
+                            </ScrollView>
+
+                            {/* Specific Fields Grid */}
+                            <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                                <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
+                                    <Text style={styles.inputLabel}>Marca/Brand</Text>
+                                    <TextInput style={styles.inputText} placeholder="es. Zara" value={brand} onChangeText={setBrand} />
+                                </View>
+
+                                <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
+                                    <Text style={styles.inputLabel}>Colore</Text>
+                                    <TextInput style={styles.inputText} placeholder="es. Nero" value={itemColor} onChangeText={setItemColor} />
+                                </View>
+
+                                {(category === 'Fashion' || category === 'Shoes' || category === 'Bags' || category === 'Accessories') && (
+                                    <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
+                                        <Text style={styles.inputLabel}>Taglia</Text>
+                                        <TextInput style={styles.inputText} placeholder="es. M, 42" value={size} onChangeText={setSize} />
+                                    </View>
+                                )}
+
+                                {(category === 'Videogames' || category === 'Electronics') && (
+                                    <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
+                                        <Text style={styles.inputLabel}>Piattaforma/Modello</Text>
+                                        <TextInput style={styles.inputText} placeholder="es. PS5" value={platform || model} onChangeText={t => { setPlatform(t); setModel(t); }} />
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* 5. DESCRIPTION */}
+                    <View style={styles.section}>
+                        <SectionHeader icon="align-left" title="DESCRIZIONE" />
+                        <View style={styles.card}>
+                            <TextInput
+                                style={styles.textArea}
+                                placeholder="Descrivi il tuo articolo in dettaglio..."
+                                placeholderTextColor="#C7C7CC"
+                                multiline
+                                numberOfLines={6}
+                                value={description}
+                                onChangeText={setDescription}
+                            />
+                        </View>
+                    </View>
+
+                    {/* 6. EXTRAS */}
+                    <View style={styles.section}>
+                        <SectionHeader icon="check-square-o" title="EXTRA" />
+                        <View style={styles.card}>
+                            <View style={styles.switchRow}>
+                                <Text style={styles.switchLabel}>Scatola Originale</Text>
+                                <Switch value={hasBox} onValueChange={setHasBox} trackColor={{ false: '#F2F2F7', true: Colors.light.accent }} />
+                            </View>
+                            <View style={[styles.switchRow, { borderTopWidth: 1, borderTopColor: '#F5F5F5' }]}>
+                                <Text style={styles.switchLabel}>Scontrino / Ricevuta</Text>
+                                <Switch value={hasReceipt} onValueChange={setHasReceipt} trackColor={{ false: '#F2F2F7', true: Colors.light.accent }} />
+                            </View>
+                        </View>
+                    </View>
+
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* Wizard Redesign */}
+            {/* WIZARD MODAL */}
             <Modal visible={showPublishWizard} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.wizardContent}>
                         <View style={styles.wizardHeader}>
                             <View style={styles.wizardIndicator} />
-                            <Text style={styles.wizardTitle}>Ottimo Lavoro!</Text>
-                            <Text style={styles.wizardSubtitle}>L'oggetto è pronto. Dove vuoi pubblicarlo?</Text>
+                            <Text style={styles.wizardTitle}>Tutto Pronto! 🚀</Text>
+                            <Text style={styles.wizardSubtitle}>Il tuo annuncio è pronto. Scegli dove pubblicarlo:</Text>
                         </View>
 
                         <View style={styles.wizardList}>
@@ -367,16 +419,16 @@ export default function NewItemScreen() {
                                         <MarketplaceLogo id={m.id} style={styles.wizLogo} />
                                         <View style={styles.wizInfo}>
                                             <Text style={styles.wizName}>{m.name}</Text>
-                                            <Text style={styles.wizStatus}>{isConnected ? 'Pronto all\'invio' : 'Richiede Login'}</Text>
+                                            <Text style={styles.wizStatus}>{isConnected ? 'Collegato' : 'Login Richiesto'}</Text>
                                         </View>
-                                        <FontAwesome name="magic" size={16} color={isConnected ? Colors.light.primary : '#C7C7CC'} />
+                                        <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
                                     </PremiumButton>
                                 );
                             })}
                         </View>
 
                         <PremiumButton style={styles.wizardClose} onPress={() => { setShowPublishWizard(false); router.replace('/(tabs)/inventory'); }}>
-                            <Text style={styles.wizardCloseText}>Lo farò più tardi</Text>
+                            <Text style={styles.wizardCloseText}>Pubblica dopo</Text>
                         </PremiumButton>
                     </View>
                 </View>
@@ -387,66 +439,71 @@ export default function NewItemScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FEFBF8' },
+
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 20,
-        backgroundColor: '#FEFBF8', // Warm background
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.light.surfaceHighlight // #F5F2ED
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
+        backgroundColor: '#FEFBF8', borderBottomWidth: 1, borderBottomColor: '#F0F0F0'
     },
-    headerBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.light.surface, justifyContent: 'center', alignItems: 'center' }, // #F5F2ED
-    headerTitle: { fontSize: 17, fontWeight: '800', color: Colors.light.text },
-    saveBtn: { backgroundColor: Colors.light.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14 },
-    saveBtnText: { color: '#FAFAFA', fontWeight: '800', fontSize: 13 }, // Soft white for text
+    headerTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
+    headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F2ED', justifyContent: 'center', alignItems: 'center' },
+    saveBtn: { backgroundColor: '#1C1C1E', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+    saveBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
 
     form: { flex: 1 },
-    imageSection: { paddingVertical: 24 },
-    imageScroll: { paddingHorizontal: 24, gap: 16 },
-    addPhotoCard: { width: 120, height: 160, borderRadius: 24, backgroundColor: Colors.light.surface, borderStyle: 'dashed', borderWidth: 2, borderColor: Colors.light.accent + '50', justifyContent: 'center', alignItems: 'center' }, // Orange border tint
-    addPhotoIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F0EAD6', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-    addPhotoText: { fontSize: 12, fontWeight: '800', color: Colors.light.primary },
-    photoCard: { width: 120, height: 160, borderRadius: 24, overflow: 'hidden', backgroundColor: Colors.light.surface },
+
+    imageSection: { marginTop: 20, marginBottom: 24, paddingLeft: 20 },
+    imageScroll: { gap: 12, paddingRight: 20 },
+    addPhotoCard: { width: 100, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#E0E0E0', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAFA' },
+    addPhotoIcon: { marginBottom: 8 },
+    addPhotoText: { fontSize: 11, fontWeight: '700', color: Colors.light.accent, textAlign: 'center' },
+    photoCard: { width: 100, height: 130, borderRadius: 16, overflow: 'hidden', backgroundColor: '#EEE' },
     photo: { width: '100%', height: '100%' },
-    removePhotoBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FF3B30', justifyContent: 'center', alignItems: 'center' },
+    removePhotoBtn: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.6)', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 
-    section: { marginBottom: 32 },
-    sectionHeader: { fontSize: 18, fontWeight: '900', color: Colors.light.text, marginLeft: 24, marginBottom: 16, letterSpacing: -0.5 },
-    categoryScroll: { paddingHorizontal: 24, gap: 12 },
-    categoryCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: '#EBE7DF' },
-    categoryCardActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
-    categoryLabel: { fontSize: 14, fontWeight: '700', color: Colors.light.text, marginLeft: 10 },
-    categoryLabelActive: { color: '#FEFBF8' }, // Warm white text
+    section: { paddingHorizontal: 20, marginBottom: 24 },
+    sectionHeaderContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    sectionHeaderText: { fontSize: 12, fontWeight: '800', color: '#8E8E93', letterSpacing: 1, textTransform: 'uppercase' },
 
-    card: { backgroundColor: '#FEFBF8', paddingHorizontal: 24, marginBottom: 32 },
-    inputLabel: { fontSize: 12, fontWeight: '800', color: Colors.light.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }, // Aesthetic Orange
-    input: { backgroundColor: Colors.light.surface, borderRadius: 16, padding: 18, fontSize: 16, fontWeight: '600', color: Colors.light.text, marginBottom: 16 },
-    inputMagic: { borderColor: Colors.light.primary, borderWidth: 1, backgroundColor: '#F0EAD6' },
-    textArea: { height: 120, textAlignVertical: 'top' },
+    card: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2, borderWidth: 1, borderColor: '#F5F5F7' },
+
+    // Grid Chips
+    catChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F7', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, marginBottom: 4 },
+    catChipActive: { backgroundColor: '#1C1C1E' },
+    catText: { fontSize: 12, fontWeight: '600', marginLeft: 6, color: '#1C1C1E' },
+    catTextActive: { color: '#FFF' },
+
+    inputLarge: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#EFEFEF' },
+    inputMagic: { color: Colors.light.accent },
 
     row: { flexDirection: 'row' },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, borderRadius: 16, paddingHorizontal: 18, height: 58, marginBottom: 16 },
-    currency: { fontSize: 18, fontWeight: '800', color: Colors.light.text, marginRight: 8 },
-    priceInput: { flex: 1, fontSize: 16, fontWeight: '800', color: Colors.light.text },
+    inputBox: { backgroundColor: '#FAFAFA', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+    inputLabel: { fontSize: 11, fontWeight: '700', color: '#8E8E93', marginBottom: 4, textTransform: 'uppercase' },
+    inputText: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
 
-    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    switchText: { fontSize: 16, fontWeight: '600', color: '#8E8E93' },
+    condChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E5E5EA' },
+    condChipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
+    condText: { fontSize: 13, fontWeight: '600', color: '#1C1C1E' },
+    condTextActive: { color: '#FFF' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
-    wizardContent: { backgroundColor: '#FEFBF8', borderRadius: 32, padding: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30 },
-    wizardHeader: { alignItems: 'center', marginBottom: 32 },
-    wizardIndicator: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#EBE7DF', marginBottom: 24 },
-    wizardTitle: { fontSize: 24, fontWeight: '900', color: Colors.light.text, marginBottom: 8 },
-    wizardSubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', fontWeight: '500' },
-    wizardList: { gap: 12, marginBottom: 32 },
-    wizItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 20, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: '#EBE7DF' },
-    wizLogo: { width: 48, height: 48, borderRadius: 8 },
-    wizInfo: { flex: 1, marginLeft: 16 },
-    wizName: { fontSize: 16, fontWeight: '800', color: Colors.light.text },
-    wizStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '600' },
-    wizardClose: { alignSelf: 'center' },
-    wizardCloseText: { fontSize: 15, fontWeight: '700', color: '#8E8E93' },
+    textArea: { fontSize: 15, lineHeight: 22, color: '#1C1C1E', minHeight: 80, textAlignVertical: 'top' },
+
+    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+    switchLabel: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
+
+    // Wizard
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+    wizardContent: { backgroundColor: '#FFF', borderRadius: 32, padding: 32, alignItems: 'center' },
+    wizardHeader: { width: '100%', alignItems: 'center', marginBottom: 24 },
+    wizardIndicator: { width: 40, height: 4, backgroundColor: '#E5E5EA', borderRadius: 2, marginBottom: 20 },
+    wizardTitle: { fontSize: 24, fontWeight: '800', marginBottom: 10, color: '#1C1C1E' },
+    wizardSubtitle: { fontSize: 15, color: '#8E8E93', textAlign: 'center', lineHeight: 22 },
+    wizardList: { width: '100%', gap: 12, marginBottom: 24 },
+    wizItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9F9F9', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F0F0F0' },
+    wizLogo: { width: 44, height: 44, borderRadius: 10, marginRight: 16 },
+    wizInfo: { flex: 1 },
+    wizName: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
+    wizStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '500' },
+    wizardClose: { paddingVertical: 12 },
+    wizardCloseText: { fontSize: 15, fontWeight: '600', color: '#8E8E93' }
 });

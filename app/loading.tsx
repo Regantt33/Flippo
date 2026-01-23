@@ -1,9 +1,9 @@
 import { View } from '@/components/Themed';
-import { ConfigService } from '@/services/ConfigService';
 import { ResizeMode, Video } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, SafeAreaView, StyleSheet } from 'react-native';
+import { Animated, Dimensions, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -55,8 +55,10 @@ export default function LoadingSyncScreen() {
     const loadConfig = async () => {
         setStatusText('Ottimizzazione esperienza...');
         try {
-            await ConfigService.fetchConfig();
-            console.log('Config loaded');
+            // REMOVED FETCH as requested: "rimuovi il fetch del json... lasciala esattamente com'è"
+            // await ConfigService.fetchConfig();
+            await new Promise(r => setTimeout(r, 800)); // Simulate work
+            console.log('Config loaded (Simulated)');
         } catch (e) {
             console.error('Config load failed', e);
         } finally {

@@ -2,12 +2,11 @@ import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { Colors } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
-import { ConfigService } from '@/services/ConfigService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import { InventoryItem, StorageService } from '@/services/storage';
 import { SCRIPTS } from '@/utils/scripts';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -145,6 +144,11 @@ export default function BrowserScreen() {
             // Convert images to Base64 for WebView injection
             const b64Images = await Promise.all((item.images || []).map(async (uri) => {
                 try {
+                    const fileInfo = await FileSystem.getInfoAsync(uri);
+                    if (!fileInfo.exists) {
+                        console.warn(`Image file missing: ${uri}`);
+                        return null;
+                    }
                     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
                     return `data:image/jpeg;base64,${base64}`;
                 } catch (e) {
@@ -158,11 +162,9 @@ export default function BrowserScreen() {
 
             setCompileProgress(0.4);
 
-            // Fetch selectors for the current site
-            const selectors = await ConfigService.getSelectorsForUrl(url || '');
-            console.log('Injecting Auto-Compile with selectors:', selectors ? 'Found' : 'Using Defaults (Empty)');
-
-            const script = SCRIPTS.AUTO_COMPILE(itemWithB64, selectors || {});
+            // Inject Smart AI Auto-Fill (Standard & Heuristic Fallback Included)
+            console.log('Injecting Smart Auto-Fill System');
+            const script = SCRIPTS.AUTO_FILL_SMART(itemWithB64);
             webViewRef.current.injectJavaScript(script);
 
             setTimeout(() => setCompileProgress(0.6), 800);
