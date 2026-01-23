@@ -2,6 +2,7 @@ import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import { InventoryItem, StorageService } from '@/services/storage';
@@ -30,6 +31,7 @@ export default function BrowserScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [canGoBack, setCanGoBack] = useState(false);
     const [showInventorySheet, setShowInventorySheet] = useState(false);
+    const [language, setLanguage] = useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
 
     // Automation State
     const [isCompiling, setIsCompiling] = useState(false);
@@ -38,17 +40,17 @@ export default function BrowserScreen() {
     const navigation = useNavigation();
     const isFromOnboarding = params.source === 'onboarding';
 
-    // REMOVED useLayoutEffect that was modifying tabBarStyle. 
-    // This often causes layout loops/freezes.
-    // We will handle specific styling later if needed.
+    const t = Translations[language] || Translations.en;
 
     useFocusEffect(useCallback(() => {
         const init = async () => {
             const mList = await loadMarketplaces();
             const connected = await AuthService.getConnections();
             const items = await StorageService.getItems();
+            const p = await SettingsService.getProfile();
             setConnectedMarketplaces(connected);
             setInventory(items);
+            setLanguage(p.language);
 
             if (params.url) {
                 setUrl(params.url as string);
@@ -146,8 +148,9 @@ export default function BrowserScreen() {
             setCompileProgress(0.4);
 
             // Inject Smart AI Auto-Fill (Standard & Heuristic Fallback Included)
-            console.log('Injecting Smart Auto-Fill System');
-            const script = SCRIPTS.AUTO_FILL_SMART(itemWithB64);
+            const profile = await SettingsService.getProfile();
+            console.log('[Selly] Injecting Smart Auto-Fill System for:', item.title, 'Lang:', profile.language || 'it');
+            const script = SCRIPTS.AUTO_FILL_SMART(itemWithB64, profile.language || 'it');
             webViewRef.current.injectJavaScript(script);
 
             setTimeout(() => setCompileProgress(0.6), 800);
@@ -186,17 +189,17 @@ export default function BrowserScreen() {
                     <View style={styles.bgDecoration2} />
 
                     <View style={[styles.hubHeader, { paddingTop: Math.max(insets.top, 20) }]}>
-                        <Text style={styles.hubTitle}>Selly Hub</Text>
-                        <Text style={styles.hubSubtitle}>Gestione annunci diretta</Text>
+                        <Text style={styles.hubTitle}>{t.hub_title}</Text>
+                        <Text style={styles.hubSubtitle}>{t.hub_subtitle}</Text>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.hubGrid} showsVerticalScrollIndicator={false}>
                         {marketplaces.length === 0 ? (
                             <View style={styles.emptyHub}>
                                 <FontAwesome name="plug" size={40} color="#F2F2F7" />
-                                <Text style={styles.emptyText}>Nessun marketplace attivo.</Text>
+                                <Text style={styles.emptyText}>{t.hub_no_marketplace}</Text>
                                 <PremiumButton style={styles.settingsBtn} onPress={() => router.push('/(tabs)/profile')}>
-                                    <Text style={styles.settingsBtnText}>Attiva Marketplace</Text>
+                                    <Text style={styles.settingsBtnText}>{t.hub_activate_marketplace}</Text>
                                 </PremiumButton>
                             </View>
                         ) : (
@@ -213,7 +216,7 @@ export default function BrowserScreen() {
                                             <Text style={styles.marketName}>{m.name}</Text>
                                             <View style={[styles.marketBadge, !connected && styles.marketBadgeError]}>
                                                 <Text style={[styles.marketBadgeText, !connected && styles.marketBadgeTextError]}>
-                                                    {connected ? 'COLLEGATO' : 'DA COLLEGARE'}
+                                                    {connected ? t.hub_connected : t.hub_to_connect}
                                                 </Text>
                                             </View>
                                         </View>
@@ -238,9 +241,9 @@ export default function BrowserScreen() {
                         <View style={styles.onboardingHeader}>
                             <PremiumButton style={styles.backBtn} onPress={() => router.replace('/onboarding?step=3')}>
                                 <FontAwesome name="chevron-left" size={16} color="#007AFF" />
-                                <Text style={styles.backText}>Indietro</Text>
+                                <Text style={styles.backText}>{t.browser_back}</Text>
                             </PremiumButton>
-                            <Text style={styles.onboardingTitle}>Collega {currentSite?.toUpperCase()}</Text>
+                            <Text style={styles.onboardingTitle}>{t.browser_connect_platform} {currentSite?.toUpperCase()}</Text>
                             <View style={{ width: 60 }} />
                         </View>
                     ) : (
@@ -273,7 +276,7 @@ export default function BrowserScreen() {
                 <View style={styles.controlBar}>
                     <View style={[styles.statusIndicator, isConnected ? styles.statusConnected : styles.statusPending]}>
                         <View style={styles.statusDot} />
-                        <Text style={styles.statusText}>{isConnected ? 'Pronto' : 'Login richiesto'}</Text>
+                        <Text style={styles.statusText}>{isConnected ? t.browser_ready : t.browser_login_required}</Text>
                     </View>
 
                     {!isConnected && (
@@ -290,6 +293,16 @@ export default function BrowserScreen() {
                     style={styles.webview}
                     onLoadStart={() => setIsLoading(true)}
                     onLoadEnd={() => setIsLoading(false)}
+                    onMessage={(event) => {
+                        try {
+                            const data = JSON.parse(event.nativeEvent.data);
+                            if (data.type === 'LOG') console.log('[WebView Log]', data.message);
+                            if (data.type === 'ERROR') console.log('[WebView Error]', data.message);
+                            if (data.type === 'SUCCESS') setIsCompiling(false);
+                        } catch (e) {
+                            console.log('[WebView Raw Message]', event.nativeEvent.data);
+                        }
+                    }}
                     onNavigationStateChange={(navState) => {
                         setCanGoBack(navState.canGoBack);
                         extractSiteFromUrl(navState.url);
@@ -329,7 +342,7 @@ export default function BrowserScreen() {
                         {compileProgress < 1 ? (
                             <>
                                 <ActivityIndicator size="large" color="#FFFFFF" />
-                                <Text style={styles.compileText}>Compilazione in corso...</Text>
+                                <Text style={styles.compileText}>{t.loading_initialization}</Text>
                                 <View style={styles.progressBar}>
                                     <View style={[styles.progressFill, { width: `${compileProgress * 100}%` }]} />
                                 </View>
@@ -337,7 +350,7 @@ export default function BrowserScreen() {
                         ) : (
                             <>
                                 <FontAwesome name="check-circle" size={50} color="#34C759" style={{ marginBottom: 16 }} />
-                                <Text style={styles.compileText}>Completato!</Text>
+                                <Text style={styles.compileText}>{t.completed}</Text>
                             </>
                         )}
                     </View>
@@ -359,7 +372,7 @@ export default function BrowserScreen() {
                     {currentSite && (
                         <PremiumButton style={styles.compileFab} onPress={() => setShowInventorySheet(true)}>
                             <FontAwesome name="magic" size={16} color="#FFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.compileBtnText}>Vendi Qui</Text>
+                            <Text style={styles.compileBtnText}>{t.browser_sell_here}</Text>
                         </PremiumButton>
                     )}
 
@@ -377,7 +390,7 @@ export default function BrowserScreen() {
                     <Pressable style={styles.modalOverlay} onPress={() => setShowInventorySheet(false)}>
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Scegli Articolo</Text>
+                                <Text style={styles.modalTitle}>{t.browser_choose_item}</Text>
                                 <PremiumButton onPress={() => setShowInventorySheet(false)}>
                                     <FontAwesome name="close" size={24} color="#8E8E93" />
                                 </PremiumButton>

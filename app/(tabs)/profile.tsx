@@ -2,6 +2,7 @@ import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -14,10 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ProfileScreen() {
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
     const insets = useSafeAreaInsets();
-    const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
+    const [profile, setProfile] = useState<UserProfile>({ name: '', email: '', language: 'en' });
     const [editing, setEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [connectedMarketplaces, setConnectedMarketplaces] = useState<string[]>([]);
+
+    const t = Translations[profile.language] || Translations.en;
 
     const loadData = async () => {
         setLoading(true);
@@ -50,13 +53,13 @@ export default function ProfileScreen() {
     const handleSaveProfile = async () => {
         await SettingsService.updateProfile(profile);
         setEditing(false);
-        Alert.alert("Profilo Aggiornato", "Le modifiche sono state salvate.");
+        Alert.alert(t.profile_update_success, t.profile_update_message);
     };
 
     const handlePickAvatar = async () => {
         if (!editing) return;
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
+        if (status !== 'granted') return Alert.alert(t.permission_denied, t.permission_photos_message);
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -78,9 +81,9 @@ export default function ProfileScreen() {
                 <View style={styles.bgDecoration2} />
 
                 <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-                    <Text style={styles.headerTitle}>Impostazioni</Text>
+                    <Text style={styles.headerTitle}>{t.profile_title}</Text>
                     <PremiumButton style={styles.editBtn} onPress={() => editing ? handleSaveProfile() : setEditing(true)}>
-                        <Text style={styles.editBtnText}>{editing ? 'Fine' : 'Modifica'}</Text>
+                        <Text style={styles.editBtnText}>{editing ? t.done : t.edit}</Text>
                     </PremiumButton>
                 </View>
 
@@ -112,29 +115,63 @@ export default function ProfileScreen() {
                                     <TextInput
                                         style={styles.input}
                                         value={profile.name}
-                                        placeholder="Il tuo nome"
+                                        placeholder={t.onboarding_input_name_placeholder}
                                         placeholderTextColor="#C7C7CC"
                                         onChangeText={t => setProfile({ ...profile, name: t })}
                                     />
                                     <TextInput
                                         style={styles.input}
                                         value={profile.email}
-                                        placeholder="La tua email"
+                                        placeholder="Email"
                                         placeholderTextColor="#C7C7CC"
                                         onChangeText={t => setProfile({ ...profile, email: t })}
                                     />
                                 </View>
                             ) : (
                                 <View>
-                                    <Text style={styles.userName}>{profile.name || 'Utente Selly'}</Text>
-                                    <Text style={styles.userEmail}>{profile.email || 'Nessuna email collegata'}</Text>
+                                    <Text style={styles.userName}>{profile.name || t.profile_seller_fallback}</Text>
+                                    <Text style={styles.userEmail}>{profile.email || t.profile_no_email}</Text>
                                 </View>
                             )}
                         </View>
                     </View>
 
-                    {/* 2. Marketplaces */}
-                    <Text style={styles.sectionHeader}>MARKETPLACE COLLEGATI</Text>
+                    {/* 2. Preferences */}
+                    <Text style={styles.sectionHeader}>{t.dashboard_all.toUpperCase()}</Text>
+                    <View style={styles.section}>
+                        <View style={styles.row}>
+                            <View style={styles.rowLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: '#F2F2F7' }]}>
+                                    <FontAwesome name="globe" size={18} color={Colors.light.icon} />
+                                </View>
+                                <View>
+                                    <Text style={styles.rowTitle}>{t.profile_app_language}</Text>
+                                    <Text style={styles.rowStatus}>{t.profile_language_impact}</Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.langSelector}>
+                            {(['it', 'en', 'fr', 'es', 'de'] as const).map((lang) => (
+                                <PremiumButton
+                                    key={lang}
+                                    style={[styles.langChip, profile.language === lang ? styles.langChipActive : {}]}
+                                    onPress={async () => {
+                                        if (profile.language === lang) return;
+                                        setProfile({ ...profile, language: lang });
+                                        await SettingsService.updateProfile({ ...profile, language: lang });
+                                        router.replace('/loading');
+                                    }}
+                                >
+                                    <Text style={[styles.langText, profile.language === lang && styles.langTextActive]}>
+                                        {lang.toUpperCase()}
+                                    </Text>
+                                </PremiumButton>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* 3. Marketplaces */}
+                    <Text style={styles.sectionHeader}>{t.profile_connected_marketplaces}</Text>
                     <View style={styles.section}>
                         {marketplaces.map((m, idx) => {
                             const isConnected = connectedMarketplaces.includes(m.id);
@@ -148,7 +185,7 @@ export default function ProfileScreen() {
                                             <View>
                                                 <Text style={styles.rowTitle}>{m.name}</Text>
                                                 <Text style={styles.rowStatus}>
-                                                    {m.isEnabled ? (isConnected ? 'Connesso' : 'Disconnesso') : 'Disabilitato'}
+                                                    {m.isEnabled ? (isConnected ? t.onboarding_market_connected : t.disconnected) : t.disabled}
                                                 </Text>
                                             </View>
                                         </View>
@@ -156,7 +193,7 @@ export default function ProfileScreen() {
                                         <View style={styles.rowRight}>
                                             {m.isEnabled && !isConnected && (
                                                 <PremiumButton style={styles.loginBtn} onPress={() => handleLogin(m.id)}>
-                                                    <Text style={styles.loginBtnText}>Login</Text>
+                                                    <Text style={styles.loginBtnText}>{t.browser_connect_platform}</Text>
                                                 </PremiumButton>
                                             )}
                                             <Switch
@@ -173,20 +210,20 @@ export default function ProfileScreen() {
                     </View>
 
                     {/* 3. Logic & Cache */}
-                    <Text style={styles.sectionHeader}>SISTEMA</Text>
+                    <Text style={styles.sectionHeader}>{t.profile_system}</Text>
                     <View style={styles.section}>
-                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Cache Pulita", "I dati temporanei sono stati rimossi.")}>
-                            <Text style={styles.actionText}>Svuota Cache</Text>
+                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert(t.completed, t.profile_update_success)}>
+                            <Text style={styles.actionText}>{t.profile_clear_cache}</Text>
                             <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
                         </PremiumButton>
                         <View style={styles.divider} />
                         <PremiumButton style={styles.actionRow}>
-                            <Text style={styles.actionText}>Informativa Privacy</Text>
+                            <Text style={styles.actionText}>{t.profile_privacy_policy}</Text>
                             <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
                         </PremiumButton>
                         <View style={styles.divider} />
-                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert("Esci", "Vuoi davvero uscire?", [{ text: "Annulla" }, { text: "Esci", style: 'destructive' }])}>
-                            <Text style={[styles.actionText, { color: '#FF3B30' }]}>Disconnetti</Text>
+                        <PremiumButton style={styles.actionRow} onPress={() => Alert.alert(t.profile_disconnect, t.profile_logout_confirm, [{ text: t.cancel }, { text: t.profile_disconnect, style: 'destructive' }])}>
+                            <Text style={[styles.actionText, { color: '#FF3B30' }]}>{t.profile_disconnect}</Text>
                         </PremiumButton>
                     </View>
 
@@ -263,6 +300,12 @@ const styles = StyleSheet.create({
     iconBox: { width: 40, height: 40, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     rowTitle: { fontSize: 16, fontWeight: '800', color: '#1C1C1E' },
     rowStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '600', marginTop: 1 },
+
+    langSelector: { flexDirection: 'row', gap: 10, marginTop: 12, paddingBottom: 4, paddingHorizontal: 20 },
+    langChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#F0F0F0' },
+    langChipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
+    langText: { fontSize: 13, fontWeight: '700', color: '#8E8E93' },
+    langTextActive: { color: '#FFF' },
 
     loginBtn: { backgroundColor: Colors.light.accent + '15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 12 },
     loginBtnText: { color: Colors.light.accent, fontSize: 12, fontWeight: '800' },

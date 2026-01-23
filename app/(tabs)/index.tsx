@@ -2,6 +2,7 @@ import { AnimatedCard } from '@/components/AnimatedCard';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { BorderRadius, Colors, Gradients, Shadows, Spacing, Typography } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
 import { GmailService, SellyNotification } from '@/services/gmail';
 import { SettingsService, UserProfile } from '@/services/settings';
 import { StorageService } from '@/services/storage';
@@ -15,7 +16,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Animated Counter Component
-const AnimatedCounter = ({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) => {
+const AnimatedCounter = ({ value, prefix = '', suffix = '', lang = 'en' }: { value: number; prefix?: string; suffix?: string; lang?: string }) => {
   const animatedValue = useSharedValue(0);
 
   useEffect(() => {
@@ -29,10 +30,13 @@ const AnimatedCounter = ({ value, prefix = '', suffix = '' }: { value: number; p
     opacity: withTiming(1, { duration: 300 }),
   }));
 
+  const localeMap: Record<string, string> = { it: 'it-IT', en: 'en-US', fr: 'fr-FR', es: 'es-ES', de: 'de-DE' };
+  const locale = localeMap[lang || 'en'] || 'en-US';
+
   return (
     <Animated.View style={animatedText}>
       <Text style={styles.summaryValue}>
-        {prefix}{Math.round(animatedValue.value).toLocaleString('it-IT')}{suffix}
+        {prefix}{Math.round(animatedValue.value).toLocaleString(locale)}{suffix}
       </Text>
     </Animated.View>
   );
@@ -46,6 +50,8 @@ export default function DashboardScreen() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'vinted' | 'ebay' | 'subito'>('all');
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const t = Translations[profile?.language || 'en'] || Translations.en;
 
   useFocusEffect(useCallback(() => {
     loadData();
@@ -115,8 +121,8 @@ export default function DashboardScreen() {
                   resizeMode="contain"
                 />
                 <View>
-                  <Text style={styles.welcomeText}>BENTORNATA</Text>
-                  <Text style={styles.heroTitle}>{profile?.name || 'Seller'}</Text>
+                  <Text style={styles.welcomeText}>{t.dashboard_welcome_back}</Text>
+                  <Text style={styles.heroTitle}>{profile?.name || t.profile_seller_fallback}</Text>
                 </View>
               </View>
               <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
@@ -140,18 +146,18 @@ export default function DashboardScreen() {
           <View style={styles.statsOverviewContainer}>
             <View style={styles.statsOverview}>
               <View style={styles.statInfoBlock}>
-                <Text style={styles.statLabelBig}>PRODOTTI ATTIVI</Text>
+                <Text style={styles.statLabelBig}>{t.dashboard_active_products}</Text>
                 <View style={styles.statValueRow}>
                   <FontAwesome name="shopping-bag" size={16} color={Colors.light.accent} style={{ marginRight: 10 }} />
-                  <AnimatedCounter value={stats.active} />
+                  <AnimatedCounter value={stats.active} lang={profile?.language} />
                 </View>
               </View>
               <View style={styles.statsDivider} />
               <View style={styles.statInfoBlock}>
-                <Text style={styles.statLabelBig}>BOZZE IN CORSO</Text>
+                <Text style={styles.statLabelBig}>{t.dashboard_drafts}</Text>
                 <View style={styles.statValueRow}>
                   <FontAwesome name="file-text-o" size={16} color={Colors.light.icon} style={{ marginRight: 10 }} />
-                  <AnimatedCounter value={stats.draft} />
+                  <AnimatedCounter value={stats.draft} lang={profile?.language} />
                 </View>
               </View>
             </View>
@@ -166,7 +172,7 @@ export default function DashboardScreen() {
                 style={[styles.filterChip, activeFilter === f ? styles.filterChipActive : {}]}
               >
                 <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
-                  {f === 'all' ? 'Tutti' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'all' ? t.dashboard_all : f.charAt(0).toUpperCase() + f.slice(1)}
                 </Text>
               </PremiumButton>
             ))}
@@ -179,8 +185,8 @@ export default function DashboardScreen() {
                 <View style={styles.emptyIconBox}>
                   <FontAwesome name="check-circle-o" size={32} color="#C7C7CC" />
                 </View>
-                <Text style={styles.emptyTitle}>Tutto Aggiornato</Text>
-                <Text style={styles.emptySubtitle}>Nessuna attività richiesta per i filtri selezionati.</Text>
+                <Text style={styles.emptyTitle}>{t.dashboard_everything_up_to_date}</Text>
+                <Text style={styles.emptySubtitle}>{t.dashboard_no_activity}</Text>
               </View>
             ) : (
               filteredNotifications.map((n, idx) => (

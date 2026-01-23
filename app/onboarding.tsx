@@ -1,5 +1,6 @@
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 import { Colors } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -13,16 +14,17 @@ const { width } = Dimensions.get('window');
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const PremiumButton = ({ onPress, children, style }: any) => {
+const PremiumButton = ({ onPress, children, style, disabled }: any) => {
     const scale = useRef(new Animated.Value(1)).current;
-    const handlePressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-    const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+    const handlePressIn = () => !disabled && Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
+    const handlePressOut = () => !disabled && Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
     return (
         <AnimatedPressable
             onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
+            disabled={disabled}
             style={[style, { transform: [{ scale }] }]}
         >
             {children}
@@ -40,11 +42,15 @@ export default function OnboardingScreen() {
     // Profile State
     const [name, setName] = useState('');
     const [avatar, setAvatar] = useState<string | null>(null);
+    const [language, setLanguage] = useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
+
+    const t = Translations[language] || Translations.en;
 
     useEffect(() => {
         loadMarketplaces();
         if (params.step) setStep(parseInt(params.step as string));
-    }, [params.step]);
+        if (params.lang) setLanguage(params.lang as any);
+    }, [params.step, params.lang]);
 
     const loadMarketplaces = async () => {
         const m = await SettingsService.getMarketplaces();
@@ -55,10 +61,20 @@ export default function OnboardingScreen() {
         })) || []);
     };
 
+    const handleLanguageChange = async (newLang: any) => {
+        if (language === newLang) return;
+        setLanguage(newLang);
+        await SettingsService.updateProfile({ language: newLang });
+        router.replace({
+            pathname: '/loading',
+            params: { returnTo: '/onboarding?step=2&lang=' + newLang }
+        });
+    };
+
     const handleNext = async () => {
         if (step === 2) {
             // Save initial profile
-            await SettingsService.updateProfile({ name, avatar: avatar || undefined });
+            await SettingsService.updateProfile({ name, avatar: avatar || undefined, language });
         }
 
         Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
@@ -100,28 +116,27 @@ export default function OnboardingScreen() {
     const WelcomeStep = () => (
         <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
             <View style={styles.heroImageContainer}>
-                {/* Blob removed as requested */}
                 <Image
                     source={require('@/assets/images/selly-logo.png')}
                     style={{ width: 120, height: 120 }}
                     resizeMode="contain"
                 />
             </View>
-            <Text style={styles.title}>Vendi Ovunque,{"\n"}Senza Sforzo.</Text>
-            <Text style={styles.subtitle}>Selly automatizza le tue vendite sui principali marketplace di moda e tech.</Text>
+            <Text style={styles.title}>{t.onboarding_welcome_title}</Text>
+            <Text style={styles.subtitle}>{t.onboarding_welcome_subtitle}</Text>
 
             <View style={styles.spacer} />
 
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Inizia Ora</Text>
+                <Text style={styles.mainBtnText}>{t.onboarding_start_now}</Text>
             </PremiumButton>
         </Animated.View>
     );
 
     const ProfileStep = () => (
         <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-            <Text style={styles.stepTitle}>Chi sei?</Text>
-            <Text style={styles.stepSubtitle}>Personalizza il tuo profilo Selly per un'esperienza su misura.</Text>
+            <Text style={styles.stepTitle}>{t.onboarding_profile_title}</Text>
+            <Text style={styles.stepSubtitle}>{t.onboarding_profile_subtitle}</Text>
 
             <View style={styles.profileSection}>
                 <PremiumButton onPress={pickImage} style={styles.avatarPicker}>
@@ -135,28 +150,45 @@ export default function OnboardingScreen() {
                 </PremiumButton>
 
                 <View style={styles.inputCard}>
-                    <Text style={styles.inputLabel}>NOME VISUALIZZATO</Text>
+                    <Text style={styles.inputLabel}>{t.onboarding_input_name}</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Es: Marco Rossi"
+                        placeholder={t.onboarding_input_name_placeholder}
                         value={name}
                         onChangeText={setName}
                     />
+                </View>
+
+                <View style={[styles.inputCard, { marginTop: 16 }]}>
+                    <Text style={styles.inputLabel}>{t.onboarding_input_lang}</Text>
+                    <View style={styles.langGrid}>
+                        {(['it', 'en', 'fr', 'es', 'de'] as const).map(l => (
+                            <PremiumButton
+                                key={l}
+                                style={[styles.langChip, language === l && styles.langChipActive]}
+                                onPress={() => handleLanguageChange(l)}
+                            >
+                                <Text style={[styles.langText, language === l && styles.langTextActive]}>
+                                    {l.toUpperCase()}
+                                </Text>
+                            </PremiumButton>
+                        ))}
+                    </View>
                 </View>
             </View>
 
             <View style={styles.spacer} />
 
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Continua</Text>
+                <Text style={styles.mainBtnText}>{t.continue}</Text>
             </PremiumButton>
         </Animated.View>
     );
 
     const ConnectStep = () => (
         <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-            <Text style={styles.stepTitle}>Collega i tuoi store</Text>
-            <Text style={styles.stepSubtitle}>Accedi ai tuoi account per abilitare la sincronizzazione automatica.</Text>
+            <Text style={styles.stepTitle}>{t.onboarding_connect_title}</Text>
+            <Text style={styles.stepSubtitle}>{t.onboarding_connect_subtitle}</Text>
 
             <ScrollView style={styles.marketList} showsVerticalScrollIndicator={false}>
                 {marketplaces.map((m) => (
@@ -170,7 +202,7 @@ export default function OnboardingScreen() {
                         <View style={styles.marketInfo}>
                             <Text style={styles.marketName}>{m.name}</Text>
                             <Text style={[styles.marketAction, m.isLoggedIn && { color: '#34C759' }]}>
-                                {m.isLoggedIn ? 'Account collegato' : 'Tocca per accedere'}
+                                {m.isLoggedIn ? t.onboarding_market_connected : t.onboarding_market_tap_login}
                             </Text>
                         </View>
                         {m.isLoggedIn ? (
@@ -185,7 +217,7 @@ export default function OnboardingScreen() {
             <View style={styles.spacer} />
 
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Ho finito</Text>
+                <Text style={styles.mainBtnText}>{t.onboarding_finish_btn}</Text>
             </PremiumButton>
         </Animated.View>
     );
@@ -195,13 +227,13 @@ export default function OnboardingScreen() {
             <View style={styles.successIconBox}>
                 <FontAwesome name="check" size={40} color="#fff" />
             </View>
-            <Text style={styles.title}>Sei Pronto!</Text>
-            <Text style={styles.subtitle}>Il tuo assistente personale alle vendite è configurato e pronto all'azione.</Text>
+            <Text style={styles.title}>{t.onboarding_final_title}</Text>
+            <Text style={styles.subtitle}>{t.onboarding_final_subtitle}</Text>
 
             <View style={styles.spacer} />
 
             <PremiumButton style={styles.mainBtn} onPress={handleNext}>
-                <Text style={styles.mainBtnText}>Apri la Dashboard</Text>
+                <Text style={styles.mainBtnText}>{t.onboarding_open_dashboard}</Text>
             </PremiumButton>
         </Animated.View>
     );
@@ -257,7 +289,7 @@ const styles = StyleSheet.create({
     input: { fontSize: 18, fontWeight: '700', color: Colors.light.text },
 
     marketList: { width: '100%', maxHeight: 350 },
-    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, padding: 20, borderRadius: 24, marginBottom: 16 },
+    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, padding: 20, borderRadius: 24, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
     marketLogo: { width: 48, height: 48, borderRadius: 8 },
     marketInfo: { flex: 1, marginLeft: 16 },
     marketName: { fontSize: 17, fontWeight: '800', color: Colors.light.text },
@@ -265,6 +297,12 @@ const styles = StyleSheet.create({
 
     mainBtn: { width: '100%', height: 64, backgroundColor: '#1C1C1E', borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 5 },
     mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+
+    langGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+    langChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F0F0F0', borderWidth: 1, borderColor: '#E5E5E5' },
+    langChipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
+    langText: { fontSize: 13, fontWeight: '700', color: '#8E8E93' },
+    langTextActive: { color: '#FFF' },
 
     successIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#34C759', justifyContent: 'center', alignItems: 'center', marginBottom: 40, shadowColor: '#34C759', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 },
     bgDecoration1: {

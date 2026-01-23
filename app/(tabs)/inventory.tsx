@@ -2,6 +2,8 @@ import { AnimatedCard } from '@/components/AnimatedCard';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
 import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
+import { SettingsService } from '@/services/settings';
 import { InventoryItem, StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -14,25 +16,30 @@ export default function InventoryScreen() {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState('');
+  const [language, setLanguage] = useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
+
+  const t = Translations[language] || Translations.en;
 
   useFocusEffect(
     useCallback(() => {
-      loadItems();
+      loadData();
     }, [])
   );
 
-  const loadItems = async () => {
+  const loadData = async () => {
     const data = await StorageService.getItems();
     setItems(data);
+    const p = await SettingsService.getProfile();
+    setLanguage(p.language);
   };
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      "Elimina Oggeto",
-      "Vuoi davvero rimuovere questo oggetto?",
+      t.error,
+      t.inventory_delete_confirm,
       [
-        { text: "Annulla", style: "cancel" },
-        { text: "Elimina", style: "destructive", onPress: async () => { await StorageService.removeItem(id); loadItems(); } }
+        { text: t.cancel, style: "cancel" },
+        { text: t.inventory_delete_btn, style: "destructive", onPress: async () => { await StorageService.removeItem(id); loadData(); } }
       ]
     );
   };
@@ -41,6 +48,9 @@ export default function InventoryScreen() {
     i.title.toLowerCase().includes(search.toLowerCase()) ||
     i.category.toLowerCase().includes(search.toLowerCase())
   );
+
+  const localeMap: Record<string, string> = { it: 'it-IT', en: 'en-US', fr: 'fr-FR', es: 'es-ES', de: 'de-DE' };
+  const locale = localeMap[language || 'en'] || 'en-US';
 
   const renderItem = ({ item, index }: { item: InventoryItem; index: number }) => {
     const mainImage = item.images && item.images.length > 0 ? { uri: item.images[0] } : null;
@@ -60,14 +70,14 @@ export default function InventoryScreen() {
 
           <View style={styles.itemInfo}>
             <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.itemPrice}>€{parseFloat(item.price).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+            <Text style={styles.itemPrice}>€{parseFloat(item.price).toLocaleString(locale, { minimumFractionDigits: 2 })}</Text>
 
             <View style={styles.mkContainer}>
               {item.listedOn?.map(id => (
                 <View key={id} style={[styles.mkDot, { backgroundColor: id === 'vinted' ? '#09B1BA' : id === 'ebay' ? '#E53238' : '#FF3B30' }]} />
               ))}
               {(!item.listedOn || item.listedOn.length === 0) && (
-                <Text style={styles.notListedText}>Non pubblicato</Text>
+                <Text style={styles.notListedText}>{t.inventory_not_published}</Text>
               )}
             </View>
           </View>
@@ -101,7 +111,7 @@ export default function InventoryScreen() {
     <SwipeWrapper leftRoute="/(tabs)" rightRoute="/(tabs)/browser">
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-          <Text style={styles.headerTitle}>Inventario</Text>
+          <Text style={styles.headerTitle}>{t.inventory_title}</Text>
           <PremiumButton style={styles.addFab} onPress={() => router.push('/new-item')}>
             <FontAwesome name="plus" size={18} color="#fff" />
           </PremiumButton>
@@ -114,7 +124,7 @@ export default function InventoryScreen() {
         <View style={styles.searchBox}>
           <FontAwesome name="search" size={14} color="#8E8E93" style={styles.searchIcon} />
           <TextInput
-            placeholder="Cerca nell'inventario..."
+            placeholder={t.inventory_search_placeholder}
             placeholderTextColor="#C7C7CC"
             style={styles.searchInput}
             value={search}
@@ -133,10 +143,10 @@ export default function InventoryScreen() {
               <View style={styles.emptyIcon}>
                 <FontAwesome name="cube" size={40} color="#F2F2F7" />
               </View>
-              <Text style={styles.emptyTitle}>Inventario Vuoto</Text>
-              <Text style={styles.emptySubtitle}>Aggiungi il tuo primo oggetto su Selly per iniziare a vendere.</Text>
+              <Text style={styles.emptyTitle}>{t.inventory_empty_title}</Text>
+              <Text style={styles.emptySubtitle}>{t.inventory_empty_subtitle}</Text>
               <PremiumButton style={styles.emptyBtn} onPress={() => router.push('/new-item')}>
-                <Text style={styles.emptyBtnText}>Aggiungi Prodotto</Text>
+                <Text style={styles.emptyBtnText}>{t.inventory_new_item}</Text>
               </PremiumButton>
             </View>
           }

@@ -1,6 +1,8 @@
 import { Colors } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
+import { SettingsService } from '@/services/settings';
 import Feather from '@expo/vector-icons/Feather';
-import { Tabs } from 'expo-router';
+import { Tabs, useFocusEffect } from 'expo-router';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -12,6 +14,13 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
+  const [lang, setLang] = React.useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
+  const t = Translations[lang] || Translations.en;
+
+  useFocusEffect(React.useCallback(() => {
+    SettingsService.getProfile().then(p => setLang(p.language));
+  }, []));
+
   return (
     <Tabs
       screenOptions={{
@@ -32,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t.tab_home,
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="home"
@@ -44,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'Inventario',
+          title: t.tab_inventory,
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="package"
@@ -56,7 +65,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="browser"
         options={{
-          title: 'Hub',
+          title: t.tab_hub,
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="compass"
@@ -68,7 +77,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profilo',
+          title: t.tab_profile,
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
               name="user"

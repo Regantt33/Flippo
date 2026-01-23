@@ -1,6 +1,8 @@
 import { View } from '@/components/Themed';
+import { Translations } from '@/constants/Translations';
+import { SettingsService } from '@/services/settings';
 import { ResizeMode, Video } from 'expo-av';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,13 +11,17 @@ const { width } = Dimensions.get('window');
 
 export default function LoadingSyncScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     // Progress Bar Animation
     const progressAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const progressBarOpacity = useRef(new Animated.Value(1)).current; // New opacity for bar only
 
+    const [language, setLanguage] = useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
+    const t = Translations[language] || Translations.en;
+
     // Status State
-    const [statusText, setStatusText] = useState('Inizializzazione...');
+    const [statusText, setStatusText] = useState('');
     const [configLoaded, setConfigLoaded] = useState(false);
     const [minTimePassed, setMinTimePassed] = useState(false);
 
@@ -50,13 +56,14 @@ export default function LoadingSyncScreen() {
         }, 2200);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [language]); // Re-start if language changes suddenly
 
     const loadConfig = async () => {
-        setStatusText('Ottimizzazione esperienza...');
+        const p = await SettingsService.getProfile();
+        setLanguage(p.language);
+        setStatusText(Translations[p.language]?.loading_optimizing || t.loading_optimizing);
+
         try {
-            // REMOVED FETCH as requested: "rimuovi il fetch del json... lasciala esattamente com'è"
-            // await ConfigService.fetchConfig();
             await new Promise(r => setTimeout(r, 800)); // Simulate work
             console.log('Config loaded (Simulated)');
         } catch (e) {
@@ -65,6 +72,13 @@ export default function LoadingSyncScreen() {
             setConfigLoaded(true);
         }
     };
+
+    // Initialize status text
+    useEffect(() => {
+        if (!statusText) {
+            setStatusText(t.loading_initialization);
+        }
+    }, [t]);
 
     // Watch for both conditions to be met
     useEffect(() => {
@@ -100,13 +114,14 @@ export default function LoadingSyncScreen() {
     const handleEndVideoFinish = () => {
         // Navigate away after the end video finishes
         // Wait slightly to show the final state
+        const returnTo = params.returnTo as string || '/(tabs)';
         setTimeout(() => {
             Animated.timing(fadeAnim, {
                 toValue: 0,
                 duration: 400,
                 useNativeDriver: true,
             }).start(() => {
-                router.replace('/(tabs)');
+                router.replace(returnTo as any);
             });
         }, 300);
     };

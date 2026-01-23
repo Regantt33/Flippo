@@ -264,303 +264,356 @@ export const SCRIPTS = {
   `,
 
     // Intelligent Auto-Fill using Window AI (Gemini Nano)
-    AUTO_FILL_SMART: (item: any) => `
+    AUTO_FILL_SMART: (item: any, lang: string = 'it') => `
     (async function() {
-        const LOG_PREFIX = '[Selly AI]';
-        console.log(\`\${LOG_PREFIX} Initializing Smart Autofill v2 (Optimized)...\`);
+        const LOG_PREFIX = '[Selly Engine]';
+        const LANG = "${lang}";
+        
+        const MESSAGES = {
+            it: {
+                analyzing: 'Selly sta analizzando la pagina...',
+                usingAI: 'Utilizzo Intelligenza Artificiale...',
+                usingHeuristics: 'Utilizzo Motore Euristico Avanzato...',
+                insertingPhotos: 'Inserimento foto...',
+                completed: 'Completato con successo!',
+                photoError: 'Errore durante l\'inserimento delle foto.'
+            },
+            en: {
+                analyzing: 'Selly is analyzing the page...',
+                usingAI: 'Using Artificial Intelligence...',
+                usingHeuristics: 'Using Advanced Heuristic Engine...',
+                insertingPhotos: 'Inserting photos...',
+                completed: 'Completed successfully!',
+                photoError: 'Error while inserting photos.'
+            },
+            fr: {
+                analyzing: 'Selly analyse la page...',
+                usingAI: 'Utilisation de l\'IA...',
+                usingHeuristics: 'Utilisation du moteur heuristique...',
+                insertingPhotos: 'Insertion de photos...',
+                completed: 'Terminé avec succès!',
+                photoError: 'Erreur lors de l\'insertion des photos.'
+            },
+            es: {
+                analyzing: 'Selly está analizando la página...',
+                usingAI: 'Usando Inteligencia Artificial...',
+                usingHeuristics: 'Usando motor heurístico...',
+                insertingPhotos: 'Insertando fotos...',
+                completed: '¡Completado con éxito!',
+                photoError: 'Error al insertar las fotos.'
+            },
+            de: {
+                analyzing: 'Selly analysiert die Seite...',
+                usingAI: 'KI wird verwendet...',
+                usingHeuristics: 'Heuristische Engine wird verwendet...',
+                insertingPhotos: 'Fotos werden eingefügt...',
+                completed: 'Erfolgreich abgeschlossen!',
+                photoError: 'Fehler beim Einfügen der Fotos.'
+            }
+        };
 
-        // --- UTILS ---
+        const msg = MESSAGES[LANG] || MESSAGES.en;
+
+        const DICTIONARY = {
+            title: [
+                'titolo', 'nome', 'oggetto', 'cosa vendi', 'cosa stai vendendo', 'descrivi il tuo oggetto',
+                'title', 'name', 'object', 'what are you selling', 'describe your item',
+                'titre', 'nom', 'objet', 'que vendez-vous',
+                'nombre', 'titulo', 'articulo', 'qué vendes',
+                'bezeichnung', 'articulo', 'titel', 'was verkaufen Sie'
+            ],
+            description: [
+                'descrizione', 'dettagli', 'info', 'raccontaci di più', 'descrivi il prodotto',
+                'description', 'details', 'tell us more', 'describe the product',
+                'beschreibung', 'detail', 'content', 'corpo',
+                'descripcion', 'detalles',
+                'état'
+            ],
+            price: [
+                'prezzo', 'euro', '€', 'costo', 'importo', 'valore', 'quanto costa',
+                'price', 'amount', 'cost', 'value', 'asking price',
+                'prix', 'montant',
+                'preis', 'betrag',
+                'precio', 'importe'
+            ],
+            category: [
+                'categoria', 'settore', 'reparto', 'genere',
+                'category', 'department', 'type', 'genre',
+                'categorie', 'rubrique',
+                'kategorie', 'bereich',
+                'clase', 'rubro'
+            ],
+            brand: [
+                'brand', 'marca', 'produttore', 'griffe', 'stilista',
+                'brandname', 'maker', 'designer',
+                'marque',
+                'marke', 'hersteller'
+            ],
+            size: [
+                'taglia', 'dimensione', 'misura', 'formato',
+                'size', 'dimension', 'measurement', 'scale',
+                'taille',
+                'größe', 'maße',
+                'talla', 'medida'
+            ],
+            condition: [
+                'condizione', 'stato', 'usura', 'come nuovo',
+                'condition', 'status', 'wear', 'as new',
+                'etat',
+                'zustand',
+                'estado'
+            ],
+            color: [
+                'colore', 'tinta', 'sfumatura',
+                'color', 'colour', 'shade', 'hue',
+                'couleur',
+                'farbe',
+                'color'
+            ],
+            material: [
+                'materiale', 'tessuto', 'composizione',
+                'material', 'fabric', 'composition',
+                'matière', 'tissu',
+                'stoff', 'material',
+                'tejido', 'material'
+            ],
+            quantity: [
+                'quantità', 'pezzi', 'n.', 'quantity', 'amount', 'stock', 'qty', 'anzahl', 'stücke', 'cantidad'
+            ]
+        };
+
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        function isVisible(elem) {
-            // Optimization: check cheap properties first
-            if (!elem) return false;
-            if (elem.type === 'hidden') return false; 
-            
-            // Layout Thrashing protection: only compute style if necessary
-            // We assume if it has no offset dimensions, it's not visible
-            if (elem.offsetWidth === 0 && elem.offsetHeight === 0) return false;
-
-            const style = window.getComputedStyle(elem);
-            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-            return true;
+        // --- UI HUD ---
+        function showHUD(message, isSuccess = false) {
+            let hud = document.getElementById('selly-hud');
+            if (!hud) {
+                hud = document.createElement('div');
+                hud.id = 'selly-hud';
+                Object.assign(hud.style, {
+                    position: 'fixed', bottom: '20px', left: '20px', right: '20px',
+                    backgroundColor: '#1C1C1E', color: '#FFF', padding: '12px 16px',
+                    borderRadius: '12px', zIndex: '999999', fontSize: '13px',
+                    fontWeight: '700', fontFamily: '-apple-system, system-ui',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)', display: 'flex',
+                    alignItems: 'center', transition: 'all 0.3s ease',
+                    opacity: '0', transform: 'translateY(10px)'
+                });
+                document.body.appendChild(hud);
+                setTimeout(() => { hud.style.opacity = '1'; hud.style.transform = 'translateY(0)'; }, 10);
+            }
+            hud.innerHTML = \`<span style="color: \${isSuccess ? '#34C759' : '#D66D45'}; margin-right: 8px;">●</span> \${message}\`;
+            if (isSuccess) setTimeout(() => { hud.style.opacity = '0'; }, 3000);
         }
 
-        async function fillInputResilient(el, value) {
-            if (!el) return;
-            // console.log(\`\${LOG_PREFIX} Filling \${el.id || el.name}\`); // Reduce verbose logging for perf
-            
-            // Only scroll if needed (check visibility in viewport)
-            const rect = el.getBoundingClientRect();
-            if (rect.top < 0 || rect.bottom > window.innerHeight) {
-                 el.scrollIntoView({ behavior: 'auto', block: 'center' }); // 'auto' is faster than 'smooth'
-                 await sleep(50);
+        // --- DISCOVERY ENGINE ---
+        function findLabelFor(el) {
+            // 1. Explicit label
+            if (el.id) {
+                const explicit = document.querySelector(\`label[for="\${el.id}"]\`);
+                if (explicit && explicit.innerText.trim()) return explicit.innerText.trim();
             }
-
-            el.focus();
-            // await sleep(10); // Reduce sleeps
+            // 2. Wrap label
+            const wrapped = el.closest('label');
+            if (wrapped && wrapped.innerText.trim()) return wrapped.innerText.trim();
             
-            // React/Vue setter hack
+            // 3. Aria-labels & Title
+            const ariaLabel = el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.name || el.id || '';
+            if (ariaLabel.length > 2) return ariaLabel;
+
+            // 4. Proximity search (search siblings and parent's previous siblings)
+            let current = el;
+            for (let i = 0; i < 3; i++) {
+                if (!current) break;
+                // Check siblings
+                let prev = current.previousElementSibling;
+                while (prev) {
+                    const text = prev.innerText || prev.textContent || '';
+                    if (text.trim().length > 2) return text.trim();
+                    prev = prev.previousElementSibling;
+                }
+                // Go to parent
+                current = current.parentElement;
+                if (current) {
+                    const header = current.querySelector('h1, h2, h3, h4, h5, span, b, strong, label, p');
+                    if (header && header !== el && header.innerText.trim().length > 2) return header.innerText.trim();
+                }
+            }
+            
+            // 5. Placeholder
+            if (el.placeholder) return el.placeholder;
+
+            return '';
+        }
+
+        async function fillInput(el, value) {
+            if (!el || value === undefined || value === null) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.focus();
+            await sleep(50);
             try {
-                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                const descriptor = Object.getOwnPropertyDescriptor(
                     el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
                     'value'
-                ).set;
-                nativeInputValueSetter.call(el, value);
-            } catch (e) {
-                el.value = value;
-            }
+                );
+                if (descriptor && descriptor.set) {
+                    descriptor.set.call(el, value);
+                } else {
+                    el.value = value;
+                }
+            } catch (e) { el.value = value; }
             
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+            
+            await sleep(100);
             el.blur();
         }
 
-        // --- DOM ANALYSIS ---
-        function scanPageContext() {
-            // Optimization: Limit the query to avoid checking thousands of nodes
-            const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea, select'));
+        // --- MATCHING ---
+        function scoreMatch(text, targetKey) {
+            if (!text) return 0;
+            text = text.toLowerCase().trim();
+            let score = 0;
+            const keywords = DICTIONARY[targetKey];
             
-            // Batch visibility checks? 
-            // Currently sequential, but filtered by offset dimensions first in isVisible
-            const candidates = [];
-            for (let i = 0; i < inputs.length; i++) {
-                const el = inputs[i];
-                if (isVisible(el)) {
-                     // Extraction Logic
-                     let labelText = '';
-                     if (el.id) {
-                        const labelEl = document.querySelector(\`label[for="\${el.id}"]\`);
-                        if (labelEl) labelText = labelEl.innerText;
-                     }
-                     if (!labelText) {
-                        const parentLabel = el.closest('label');
-                        if (parentLabel) labelText = parentLabel.innerText;
-                     }
-                     if (!labelText) labelText = el.getAttribute('aria-label') || '';
-                     if (!labelText) labelText = el.placeholder || '';
-                     
-                     if (labelText) {
-                         labelText = labelText.replace(/\\n/g, ' ').trim();
-                         if (labelText.length > 50) labelText = labelText.substring(0, 50); // Truncate long labels
-                     }
-
-                     candidates.push({
-                        tempId: \`field_\${i}\`,
-                        element: el,
-                        descReference: {
-                            id: el.id,
-                            name: el.name,
-                            type: el.type || el.tagName.toLowerCase(),
-                            label: labelText,
-                            placeholder: el.placeholder
-                        }
-                     });
+            keywords.forEach(kw => {
+                kw = kw.toLowerCase();
+                if (text === kw) score += 50; // Exact match
+                else if (text.includes(kw)) score += 20; // Partial match
+                
+                // Fuzzy check for labels like "Il tuo titolo"
+                if (kw.length > 4 && text.length > 4) {
+                    if (text.includes(kw.substring(0, kw.length - 1))) score += 5;
                 }
-            }
-            return candidates;
-        }
-
-        // --- HEURISTIC MATCHING ---
-        function runHeuristicMatching(itemData, candidates) {
-             const mapping = {};
-             // Optimized keywords (IT, EN, FR, DE, ES)
-             const targets = [
-                 { key: 'title', keywords: ['titolo', 'nome', 'oggetto', 'title', 'name', 'titre', 'nom', 'titel', 'nombre', 'titulo'] },
-                 { key: 'description', keywords: ['descrizione', 'dettagli', 'description', 'info', 'beschreibung', 'details', 'descripcion'] },
-                 { key: 'price', keywords: ['prezzo', 'euro', 'price', 'prix', 'preis', 'precio', 'importo', 'amount'] },
-                 { key: 'category', keywords: ['categoria', 'category', 'settore', 'categorie', 'kategorie', 'clase'] },
-                 { key: 'brand', keywords: ['brand', 'marca', 'produttore', 'marque', 'marke'] },
-                 { key: 'condition', keywords: ['condizione', 'stato', 'condition', 'etat', 'zustand', 'estado', 'condiciones'] }
-             ];
-
-             const usedIds = new Set();
-
-             // Limit candidates for Heuristics to avoid N*M complexity on large forms
-             const limitCandidates = candidates.slice(0, 30); 
-
-             targets.forEach(target => {
-                 let bestScore = 0;
-                 let bestCandidateId = null;
-
-                 limitCandidates.forEach(c => {
-                     if (usedIds.has(c.tempId)) return;
-                     const textToScan = (c.descReference.label + ' ' + c.descReference.placeholder + ' ' + c.descReference.name + ' ' + c.descReference.id).toLowerCase();
-                     
-                     let score = 0;
-                     target.keywords.forEach(kw => {
-                         if (textToScan.includes(kw)) score += 10;
-                     });
-                     
-                     if (score > 0) {
-                         if (target.key === 'description' && c.descReference.type === 'textarea') score += 15;
-                         if (target.key === 'title' && c.descReference.type === 'text') score += 5;
-                         if (target.key === 'price' && (c.descReference.type === 'number' || c.descReference.type === 'tel')) score += 10;
-                     }
-
-                     if (score > bestScore) {
-                         bestScore = score;
-                         bestCandidateId = c.tempId;
-                     }
-                 });
-
-                 if (bestCandidateId) {
-                     let value = itemData[target.key] || (itemData.details ? itemData.details[target.key] : '');
-                     if (value) {
-                         if (target.key === 'price') value = value.replace(/[^0-9.,]/g, '').trim();
-                         mapping[bestCandidateId] = value;
-                         usedIds.add(bestCandidateId);
-                     }
-                 }
-             });
-
-             return mapping;
-        }
-
-        // --- AI EXECUTION ---
-        async function runAIMatching(itemData, candidates) {
-            if (!window.ai) return runHeuristicMatching(itemData, candidates);
-            
-            // Limit payload size for AI
-            const safeCandidates = candidates.slice(0, 15); // Only send top 15 visible fields to AI
-
-            const itemContext = JSON.stringify({
-                title: itemData.title,
-                price: itemData.price,
-                description: itemData.description,
-                category: itemData.category, // e.g., "Fashion"
-                condition: itemData.condition
             });
-
-            const fieldsContext = JSON.stringify(safeCandidates.map(c => ({
-                tempId: c.tempId,
-                ...c.descReference
-            })));
-
-            const prompt = \`Match Item to Fields.
-Item: \${itemContext}
-Fields: \${fieldsContext}
-
-Rules:
-1. Return JSON { "tempId": "value" }.
-2. TRANSLATE values to the language of the Fields if necessary (e.g. if field is "Kategorie" (DE) and value is "Fashion", fill "Mode" or "Kleidung").
-3. For Category/Brand, assume the best matching text.
-\`;
-
-
-            try {
-                const session = await window.ai.languageModel.create();
-                const response = await session.prompt(prompt);
-                const cleanJson = response.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-                return JSON.parse(cleanJson);
-            } catch (e) {
-                return runHeuristicMatching(itemData, candidates);
-            }
-        }
-
-        // --- IMAGE INJECTION ---
-        async function handleImageInjection(images) {
-             if (!images || images.length === 0) return;
-             // Quick check for existing file input
-             let fileInput = document.querySelector('input[type="file"]');
-             if (!fileInput) {
-                  // Only search deeper if explicit not found
-                  const allFiles = document.querySelectorAll('input[type="file"]');
-                  if (allFiles.length > 0) fileInput = allFiles[0]; 
-             }
-             if (!fileInput) return;
-
-             // Check if already injected to avoid loops
-             if (fileInput.dataset.sellyInjected) return;
-
-             try {
-                const files = await Promise.all(images.map(async (b64, i) => {
-                    const parts = b64.split(';base64,');
-                    const contentType = parts[0].split(':')[1];
-                    const raw = window.atob(parts[1]);
-                    const uInt8Array = new Uint8Array(raw.length);
-                    for (let j = 0; j < raw.length; ++j) {
-                        uInt8Array[j] = raw.charCodeAt(j);
-                    }
-                    return new File([new Blob([uInt8Array], { type: contentType })], 'img_'+i+'.jpg', { type: contentType });
-                }));
-                const dataTransfer = new DataTransfer();
-                files.forEach(f => dataTransfer.items.add(f));
-                
-                Object.defineProperty(fileInput, 'files', { value: dataTransfer.files, writable: false });
-                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                fileInput.dispatchEvent(new Event('input', { bubbles: true }));
-                
-                // Mark as injected
-                fileInput.dataset.sellyInjected = 'true';
-                console.log(\`\${LOG_PREFIX} Images injected.\`);
-             } catch (e) {}
-        }
-
-        // --- ORCHESTRATOR ---
-        const itemInfo = ${JSON.stringify(item)};
-        let isRunning = false;
-
-        async function executeSmartFill() {
-            if (isRunning) return;
-            isRunning = true;
             
-            // Temporary disconnect observer
-            if (window.sellyObserver) window.sellyObserver.disconnect();
+            return score;
+        }
 
-            try {
-                const candidates = scanPageContext();
-                if (candidates.length > 0) {
-                    const mapping = await runAIMatching(itemInfo, candidates);
-                    if (mapping) {
-                        for (const [tempId, value] of Object.entries(mapping)) {
-                            const candidate = candidates.find(c => c.tempId === tempId);
-                            // Only fill if empty to avoid fighting user
-                            if (candidate && candidate.element && !candidate.element.value) {
-                                await fillInputResilient(candidate.element, value);
-                            }
+        // --- MAIN ORCHESTRATOR ---
+        async function runAutofill() {
+            showHUD(msg.analyzing);
+            const item = ${JSON.stringify(item)};
+            const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea'));
+            
+            // 1. Try window.ai first
+            let mapping = null;
+            if (window.ai && window.ai.languageModel) {
+                try {
+                    const session = await window.ai.languageModel.create();
+                    const context = {
+                        title: item.title,
+                        description: item.description,
+                        price: item.price,
+                        category: item.category,
+                        brand: item.brand,
+                        size: item.size,
+                        condition: item.condition,
+                        color: item.color,
+                        material: item.material
+                    };
+                    const fields = inputs.slice(0, 15).map((m, i) => ({ id: i, label: findLabelFor(m).substring(0, 50) }));
+                    
+                    const prompt = \`Role: E-commerce form filler.
+Context Data (can be in any language): \${JSON.stringify(context)}
+Fields to fill: \${JSON.stringify(fields)}
+Action: Map the Context Data to the Fields.
+Language: Return values in the language of the Field labels if possible, otherwise use \${LANG}.
+Format: Strict JSON object like {"0": "value", "1": "value"}.\`;
+
+                    const res = await session.prompt(prompt);
+                    const match = res.match(/{[^]*}/);
+                    if (match) {
+                        mapping = JSON.parse(match[0]);
+                        showHUD(msg.usingAI, true);
+                    }
+                } catch(e) { console.log(LOG_PREFIX, 'AI Logic Error/Fallback', e); }
+            }
+
+            // 2. Super Heuristic Fallback (Robust & Multilingual)
+            if (!mapping) {
+                showHUD(msg.usingHeuristics);
+                mapping = {};
+                inputs.forEach((el, index) => {
+                    const label = findLabelFor(el);
+                    if (!label && !el.placeholder) return;
+
+                    let bestKey = null;
+                    let maxScore = 0;
+
+                    Object.keys(DICTIONARY).forEach(key => {
+                        const score = Math.max(scoreMatch(label, key), scoreMatch(el.placeholder, key));
+                        if (score > maxScore) {
+                            maxScore = score;
+                            bestKey = key;
                         }
+                    });
+
+                    if (maxScore > 15 && bestKey) {
+                        mapping[index] = item[bestKey] || (item.details ? item.details[bestKey] : '');
                     }
-                }
-                
-                if (itemInfo.images && itemInfo.images.length > 0) {
-                    await handleImageInjection(itemInfo.images);
-                }
+                });
+            }
 
-            } catch(e) { console.error(e); }
-            
-            isRunning = false;
-            // Re-connect observer
-            if (window.sellyObserver) window.sellyObserver.observe(document.body, { childList: true, subtree: true });
-        }
-
-        // Initial Run
-        await executeSmartFill();
-
-        // Optimized Mutation Observer
-        let observerTimeout;
-        window.sellyObserver = new MutationObserver((mutations) => {
-            // Check if mutations are relevant (ignore style changes, look for addedNodes)
-            let relevant = false;
-            for (const m of mutations) {
-                if (m.addedNodes.length > 0) {
-                    relevant = true; 
-                    break;
+            // 3. Execution
+            let fillCount = 0;
+            for (const [id, value] of Object.entries(mapping)) {
+                if (!value) continue;
+                const el = inputs[id];
+                // Only fill if empty or we have high confidence (heuristic)
+                if (el && (!el.value || el.value.length < 2)) {
+                    await fillInput(el, value);
+                    fillCount++;
+                    await sleep(150);
                 }
             }
-            if (!relevant) return;
 
-            clearTimeout(observerTimeout);
-            // Increased debounce to 3000ms to allow UI animations to settle
-            observerTimeout = setTimeout(() => {
-                console.log(\`\${LOG_PREFIX} Relevant mutation, re-running...\`);
-                executeSmartFill();
-            }, 3000);
-        });
+            // 4. Image Injection
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput && item.images && item.images.length > 0) {
+                showHUD(msg.insertingPhotos);
+                try {
+                    const dt = new DataTransfer();
+                    for (const b64 of item.images) {
+                        try {
+                            const res = await fetch(b64);
+                            const blob = await res.blob();
+                            dt.items.add(new File([blob], 'selly_img.jpg', { type: 'image/jpeg' }));
+                        } catch(e) { console.error('Blob error', e); }
+                    }
+                    if (dt.files.length > 0) {
+                        fileInput.files = dt.files;
+                        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } catch(e) { showHUD(msg.photoError); }
+            }
 
-        window.sellyObserver.observe(document.body, { childList: true, subtree: true });
-        console.log(\`\${LOG_PREFIX} Observer active.\`);
+            if (fillCount > 0) {
+                showHUD(msg.completed, true);
+                if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SUCCESS' }));
+            } else {
+                showHUD(msg.completed, true);
+                if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOG', message: 'No fields were filled' }));
+            }
+        }
+
+        // Run & Observe
+        await runAutofill();
         
+        let timeout;
+        const observer = new MutationObserver((mutations) => {
+            // Only re-run if significant elements added
+            const addedInputs = mutations.some(m => Array.from(m.addedNodes).some(n => n.tagName === 'INPUT' || (n.querySelectorAll && n.querySelectorAll('input').length > 0)));
+            
+            if (addedInputs) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => runAutofill(), 2000);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     })();
     `
 };

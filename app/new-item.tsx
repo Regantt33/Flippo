@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Translations } from '@/constants/Translations';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import { InventoryCategory, StorageService } from '@/services/storage';
@@ -43,37 +44,31 @@ const SectionHeader = ({ icon, title }: { icon: any, title: string }) => (
 // --- LOGIC & CONSTANTS ---
 
 // Comprehensive Categories
-const CATEGORIES: { id: InventoryCategory; label: string; icon: any; subtext?: string }[] = [
-    { id: 'Fashion', label: 'Moda', icon: 'tag', subtext: 'Abbigliamento, Scarpe' },
-    { id: 'Shoes', label: 'Scarpe', icon: 'bolt', subtext: 'Sneakers, Classiche' },
-    { id: 'Bags', label: 'Borse', icon: 'shopping-bag', subtext: 'Zaini, Valigie' },
-    { id: 'Accessories', label: 'Accessori', icon: 'magic', subtext: 'Gioielli, Orologi' },
-    { id: 'Electronics', label: 'Elettronica', icon: 'mobile', subtext: 'Telefoni, PC' },
-    { id: 'Videogames', label: 'Gaming', icon: 'gamepad', subtext: 'Console, Giochi' },
-    { id: 'Collectibles', label: 'Collezionismo', icon: 'diamond', subtext: 'Carte, Lego' },
-    { id: 'Home', label: 'Casa', icon: 'home', subtext: 'Arredo, Cucina' },
-    { id: 'Entertainment', label: 'Media', icon: 'music', subtext: 'Libri, DVD' },
-    { id: 'Beauty', label: 'Beauty', icon: 'heart', subtext: 'Cosmetici' },
-    { id: 'Sports', label: 'Sport', icon: 'soccer-ball-o', subtext: 'Attrezzatura' },
-    { id: 'Pets', label: 'Animali', icon: 'paw', subtext: 'Accessori' },
-    { id: 'Motors', label: 'Motori', icon: 'car', subtext: 'Auto, Moto, Ricambi' },
-    { id: 'Other', label: 'Altro', icon: 'cube', subtext: 'Varie' },
+const CATEGORIES: { id: InventoryCategory; labelKey: string; icon: any; subtextKey: string }[] = [
+    { id: 'Fashion', labelKey: 'new_item_cat_fashion', icon: 'tag', subtextKey: 'new_item_cat_fashion_sub' },
+    { id: 'Shoes', labelKey: 'new_item_cat_shoes', icon: 'bolt', subtextKey: 'new_item_cat_shoes_sub' },
+    { id: 'Bags', labelKey: 'new_item_cat_bags', icon: 'shopping-bag', subtextKey: 'new_item_cat_bags_sub' },
+    { id: 'Accessories', labelKey: 'new_item_cat_accessories', icon: 'magic', subtextKey: 'new_item_cat_accessories_sub' },
+    { id: 'Electronics', labelKey: 'new_item_cat_electronics', icon: 'mobile', subtextKey: 'new_item_cat_electronics_sub' },
+    { id: 'Videogames', labelKey: 'new_item_cat_videogames', icon: 'gamepad', subtextKey: 'new_item_cat_videogames_sub' },
+    { id: 'Collectibles', labelKey: 'new_item_cat_collectibles', icon: 'diamond', subtextKey: 'new_item_cat_collectibles_sub' },
+    { id: 'Home', labelKey: 'new_item_cat_home', icon: 'home', subtextKey: 'new_item_cat_home_sub' },
+    { id: 'Entertainment', labelKey: 'new_item_cat_entertainment', icon: 'music', subtextKey: 'new_item_cat_entertainment_sub' },
+    { id: 'Beauty', labelKey: 'new_item_cat_beauty', icon: 'heart', subtextKey: 'new_item_cat_beauty_sub' },
+    { id: 'Sports', labelKey: 'new_item_cat_sports', icon: 'soccer-ball-o', subtextKey: 'new_item_cat_sports_sub' },
+    { id: 'Pets', labelKey: 'new_item_cat_pets', icon: 'paw', subtextKey: 'new_item_cat_pets_sub' },
+    { id: 'Motors', labelKey: 'new_item_cat_motors', icon: 'car', subtextKey: 'new_item_cat_motors_sub' },
+    { id: 'Other', labelKey: 'new_item_cat_other', icon: 'cube', subtextKey: 'new_item_cat_other_sub' },
 ];
 
-const CONDITIONS = [
-    'Nuovo con cartellino',
-    'Nuovo senza cartellino',
-    'Ottimo',
-    'Buono',
-    'Discreto',
-    'Da restaurare'
-];
+const CONDITIONS = []; // Will be populated from t.new_item_conditions
 
 export default function NewItemScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams();
     const [images, setImages] = useState<string[]>([]);
+    const [language, setLanguage] = useState<'it' | 'en' | 'fr' | 'es' | 'de'>('en');
 
     // Core State
     const [title, setTitle] = useState('');
@@ -103,26 +98,26 @@ export default function NewItemScreen() {
     const [connectedMarketplaces, setConnectedMarketplaces] = useState<string[]>([]);
 
     const isEditing = !!params.id;
+    const t = Translations[language] || Translations.en;
 
     useFocusEffect(useCallback(() => {
-        loadMarketplaces();
-        loadConnectedMarketplaces();
-        if (params.id) {
-            loadItem(params.id as string);
-        }
+        loadData();
         if (params.openWizard === 'true') {
             setShowPublishWizard(true);
         }
     }, [params.id, params.openWizard]));
 
-    const loadConnectedMarketplaces = async () => {
-        const connected = await AuthService.getConnections();
-        setConnectedMarketplaces(connected);
-    };
-
-    const loadMarketplaces = async () => {
+    const loadData = async () => {
         const m = await SettingsService.getMarketplaces();
         setMarketplaces(m.filter(x => x.isEnabled));
+        const connected = await AuthService.getConnections();
+        setConnectedMarketplaces(connected);
+        const p = await SettingsService.getProfile();
+        setLanguage(p.language);
+
+        if (params.id) {
+            loadItem(params.id as string);
+        }
     };
 
     const loadItem = async (id: string) => {
@@ -168,7 +163,7 @@ export default function NewItemScreen() {
     const handleAddPhoto = async () => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') return Alert.alert("Permesso Negato", "Selly ha bisogno dell'accesso alle foto.");
+            if (status !== 'granted') return Alert.alert(t.permission_denied, t.permission_photos_message);
 
             let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.8 });
             if (!result.canceled) setImages([...images, result.assets[0].uri]);
@@ -176,7 +171,7 @@ export default function NewItemScreen() {
     };
 
     const handleSave = async () => {
-        if (!title) return Alert.alert("Attenzione", "Il titolo è obbligatorio.");
+        if (!title) return Alert.alert(t.error, t.onboarding_input_name_placeholder);
 
         const itemData = {
             title, price, description, images, category,
@@ -203,9 +198,9 @@ export default function NewItemScreen() {
         // --- PLATFORM COMPATIBILITY CHECKS ---
         if (platformId === 'vinted' && category === 'Motors') {
             Alert.alert(
-                "Categoria non supportata",
-                "Vinted non supporta la vendita di Veicoli a motore.",
-                [{ text: "Ho capito" }]
+                t.error,
+                t.new_item_vinted_motors_error,
+                [{ text: t.done }]
             );
             return;
         }
@@ -224,9 +219,9 @@ export default function NewItemScreen() {
                 <PremiumButton style={styles.headerBtn} onPress={() => router.back()}>
                     <FontAwesome name="chevron-left" size={16} color="#1C1C1E" />
                 </PremiumButton>
-                <Text style={styles.headerTitle}>{isEditing ? 'Modifica' : 'Nuovo Oggetto'}</Text>
+                <Text style={styles.headerTitle}>{isEditing ? t.edit : t.inventory_new_item}</Text>
                 <PremiumButton style={styles.saveBtn} onPress={handleSave}>
-                    <Text style={styles.saveBtnText}>Salva</Text>
+                    <Text style={styles.saveBtnText}>{t.save}</Text>
                 </PremiumButton>
             </View>
 
@@ -246,7 +241,7 @@ export default function NewItemScreen() {
                                 <View style={styles.addPhotoIcon}>
                                     <FontAwesome name="camera" size={24} color={Colors.light.accent} />
                                 </View>
-                                <Text style={styles.addPhotoText}>Aggiungi Foto</Text>
+                                <Text style={styles.addPhotoText}>{t.new_item_add_photos}</Text>
                             </PremiumButton>
                             {images.map((uri, index) => (
                                 <View key={index} style={styles.photoCard}>
@@ -261,18 +256,21 @@ export default function NewItemScreen() {
 
                     {/* 2. CATEGORY SELECTOR (GRID) */}
                     <View style={styles.section}>
-                        <SectionHeader icon="tag" title="SELEZIONA CATEGORIA" />
+                        <SectionHeader icon="tag" title={t.new_item_select_category.toUpperCase()} />
                         <View style={[styles.card, { padding: 16 }]}>
                             {/* Grid Layout using flexWrap */}
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                                 {CATEGORIES.map(item => (
                                     <PremiumButton
-                                        key={item.label}
+                                        key={item.id}
                                         style={[styles.catChip, category === item.id ? styles.catChipActive : {}]}
                                         onPress={() => setCategory(item.id)}
                                     >
                                         <FontAwesome name={item.icon} size={14} color={category === item.id ? '#FFF' : '#1C1C1E'} />
-                                        <Text style={[styles.catText, category === item.id && styles.catTextActive]}>{item.label}</Text>
+                                        <View style={{ marginLeft: 8 }}>
+                                            <Text style={[styles.catText, category === item.id && styles.catTextActive]}>{(t as any)[item.labelKey]}</Text>
+                                            <Text style={[styles.catSub, category === item.id && styles.catSubActive]}>{(t as any)[item.subtextKey]}</Text>
+                                        </View>
                                     </PremiumButton>
                                 ))}
                             </View>
@@ -281,12 +279,12 @@ export default function NewItemScreen() {
 
                     {/* 3. MAIN INFO */}
                     <View style={styles.section}>
-                        <SectionHeader icon="pencil" title="INFO PRINCIPALI" />
+                        <SectionHeader icon="pencil" title={t.new_item_main_info.toUpperCase()} />
                         <View style={styles.card}>
-                            <Text style={styles.inputLabel}>Titolo Annuncio</Text>
+                            <Text style={styles.inputLabel}>{t.new_item_title}</Text>
                             <TextInput
                                 style={[styles.inputLarge, magicActive && styles.inputMagic]}
-                                placeholder="Cosa vendi? (es. Nike Air Force 1)"
+                                placeholder={t.new_item_title_placeholder}
                                 placeholderTextColor="#C7C7CC"
                                 value={title}
                                 onChangeText={setTitle}
@@ -298,7 +296,7 @@ export default function NewItemScreen() {
                             {/* Price & Quantity ROW */}
                             <View style={styles.row}>
                                 <View style={[styles.inputBox, { flex: 1, marginRight: 12 }]}>
-                                    <Text style={styles.inputLabel}>Prezzo (€)</Text>
+                                    <Text style={styles.inputLabel}>{t.new_item_price} (€)</Text>
                                     <TextInput
                                         style={styles.inputText}
                                         placeholder="0.00"
@@ -308,7 +306,7 @@ export default function NewItemScreen() {
                                     />
                                 </View>
                                 <View style={[styles.inputBox, { width: 100 }]}>
-                                    <Text style={styles.inputLabel}>Quantità</Text>
+                                    <Text style={styles.inputLabel}>{t.new_item_quantity}</Text>
                                     <TextInput
                                         style={styles.inputText}
                                         placeholder="1"
@@ -323,12 +321,12 @@ export default function NewItemScreen() {
 
                     {/* 4. DETAILS GRID */}
                     <View style={styles.section}>
-                        <SectionHeader icon="sliders" title="SPECIFICHE" />
+                        <SectionHeader icon="sliders" title={t.new_item_specs.toUpperCase()} />
                         <View style={styles.card}>
                             {/* Conditions Selector */}
-                            <Text style={[styles.inputLabel, { marginBottom: 8 }]}>Condizioni</Text>
+                            <Text style={[styles.inputLabel, { marginBottom: 8 }]}>{t.new_item_condition}</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 16 }}>
-                                {CONDITIONS.map(c => (
+                                {(t.new_item_conditions || []).map((c: string) => (
                                     <PremiumButton
                                         key={c}
                                         style={[styles.condChip, condition === c && styles.condChipActive]}
@@ -342,25 +340,25 @@ export default function NewItemScreen() {
                             {/* Specific Fields Grid */}
                             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
                                 <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
-                                    <Text style={styles.inputLabel}>Marca/Brand</Text>
+                                    <Text style={styles.inputLabel}>{t.new_item_brand}</Text>
                                     <TextInput style={styles.inputText} placeholder="es. Zara" value={brand} onChangeText={setBrand} />
                                 </View>
 
                                 <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
-                                    <Text style={styles.inputLabel}>Colore</Text>
+                                    <Text style={styles.inputLabel}>{t.new_item_color}</Text>
                                     <TextInput style={styles.inputText} placeholder="es. Nero" value={itemColor} onChangeText={setItemColor} />
                                 </View>
 
                                 {(category === 'Fashion' || category === 'Shoes' || category === 'Bags' || category === 'Accessories') && (
                                     <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
-                                        <Text style={styles.inputLabel}>Taglia</Text>
+                                        <Text style={styles.inputLabel}>{t.new_item_size}</Text>
                                         <TextInput style={styles.inputText} placeholder="es. M, 42" value={size} onChangeText={setSize} />
                                     </View>
                                 )}
 
                                 {(category === 'Videogames' || category === 'Electronics') && (
                                     <View style={[styles.inputBox, { flex: 1, minWidth: '45%' }]}>
-                                        <Text style={styles.inputLabel}>Piattaforma/Modello</Text>
+                                        <Text style={styles.inputLabel}>{t.new_item_platform_model}</Text>
                                         <TextInput style={styles.inputText} placeholder="es. PS5" value={platform || model} onChangeText={t => { setPlatform(t); setModel(t); }} />
                                     </View>
                                 )}
@@ -370,11 +368,11 @@ export default function NewItemScreen() {
 
                     {/* 5. DESCRIPTION */}
                     <View style={styles.section}>
-                        <SectionHeader icon="align-left" title="DESCRIZIONE" />
+                        <SectionHeader icon="align-left" title={t.new_item_description.toUpperCase()} />
                         <View style={styles.card}>
                             <TextInput
                                 style={styles.textArea}
-                                placeholder="Descrivi il tuo articolo in dettaglio..."
+                                placeholder={t.new_item_description_placeholder}
                                 placeholderTextColor="#C7C7CC"
                                 multiline
                                 numberOfLines={6}
@@ -386,14 +384,14 @@ export default function NewItemScreen() {
 
                     {/* 6. EXTRAS */}
                     <View style={styles.section}>
-                        <SectionHeader icon="check-square-o" title="EXTRA" />
+                        <SectionHeader icon="check-square-o" title={t.new_item_extra} />
                         <View style={styles.card}>
                             <View style={styles.switchRow}>
-                                <Text style={styles.switchLabel}>Scatola Originale</Text>
+                                <Text style={styles.switchLabel}>{t.new_item_has_box}</Text>
                                 <Switch value={hasBox} onValueChange={setHasBox} trackColor={{ false: '#F2F2F7', true: Colors.light.accent }} />
                             </View>
                             <View style={[styles.switchRow, { borderTopWidth: 1, borderTopColor: '#F5F5F5' }]}>
-                                <Text style={styles.switchLabel}>Scontrino / Ricevuta</Text>
+                                <Text style={styles.switchLabel}>{t.new_item_has_receipt}</Text>
                                 <Switch value={hasReceipt} onValueChange={setHasReceipt} trackColor={{ false: '#F2F2F7', true: Colors.light.accent }} />
                             </View>
                         </View>
@@ -408,8 +406,8 @@ export default function NewItemScreen() {
                     <View style={styles.wizardContent}>
                         <View style={styles.wizardHeader}>
                             <View style={styles.wizardIndicator} />
-                            <Text style={styles.wizardTitle}>Tutto Pronto! 🚀</Text>
-                            <Text style={styles.wizardSubtitle}>Il tuo annuncio è pronto. Scegli dove pubblicarlo:</Text>
+                            <Text style={styles.wizardTitle}>{t.new_item_ready} 🚀</Text>
+                            <Text style={styles.wizardSubtitle}>{t.new_item_choose_publish}</Text>
                         </View>
 
                         <View style={styles.wizardList}>
@@ -424,7 +422,7 @@ export default function NewItemScreen() {
                                         <MarketplaceLogo id={m.id} style={styles.wizLogo} />
                                         <View style={styles.wizInfo}>
                                             <Text style={styles.wizName}>{m.name}</Text>
-                                            <Text style={styles.wizStatus}>{isConnected ? 'Collegato' : 'Login Richiesto'}</Text>
+                                            <Text style={styles.wizStatus}>{isConnected ? t.onboarding_market_connected : t.browser_login_required}</Text>
                                         </View>
                                         <FontAwesome name="chevron-right" size={12} color="#C7C7CC" />
                                     </PremiumButton>
@@ -433,7 +431,7 @@ export default function NewItemScreen() {
                         </View>
 
                         <PremiumButton style={styles.wizardClose} onPress={() => { setShowPublishWizard(false); router.replace('/(tabs)/inventory'); }}>
-                            <Text style={styles.wizardCloseText}>Pubblica dopo</Text>
+                            <Text style={styles.wizardCloseText}>{t.new_item_publish_later}</Text>
                         </PremiumButton>
                     </View>
                 </View>
@@ -475,8 +473,10 @@ const styles = StyleSheet.create({
     // Grid Chips
     catChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F7', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, marginBottom: 4 },
     catChipActive: { backgroundColor: Colors.light.accent },
-    catText: { fontSize: 12, fontWeight: '600', marginLeft: 6, color: '#1C1C1E' },
+    catText: { fontSize: 13, fontWeight: '700', color: '#1C1C1E' },
     catTextActive: { color: '#FFF' },
+    catSub: { fontSize: 10, fontWeight: '500', color: '#8E8E93' },
+    catSubActive: { color: 'rgba(255,255,255,0.7)' },
 
     inputLarge: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#EFEFEF' },
     inputMagic: { color: Colors.light.accent },

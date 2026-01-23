@@ -21,6 +21,7 @@ export interface UserProfile {
     email: string;
     bio?: string;
     avatar?: string;
+    language: 'it' | 'en' | 'fr' | 'es' | 'de';
 }
 
 const SETTINGS_KEY = '@selly_settings';
@@ -69,9 +70,9 @@ export const SettingsService = {
     getProfile: async (): Promise<UserProfile> => {
         try {
             const json = await AsyncStorage.getItem(PROFILE_KEY);
-            return json ? JSON.parse(json) : { name: 'Reseller', email: '' };
+            return json ? JSON.parse(json) : { name: 'Reseller', email: '', language: 'en' };
         } catch (e) {
-            return { name: 'Reseller', email: '' }; // Default
+            return { name: 'Reseller', email: '', language: 'en' }; // Default
         }
     },
 
