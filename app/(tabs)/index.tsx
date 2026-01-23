@@ -1,29 +1,38 @@
+import { AnimatedCard } from '@/components/AnimatedCard';
+import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
-import { Colors } from '@/constants/Colors';
+import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
 import { GmailService, SellyNotification } from '@/services/gmail';
 import { SettingsService, UserProfile } from '@/services/settings';
 import { StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// Animated Counter Component
+const AnimatedCounter = ({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) => {
+  const animatedValue = useSharedValue(0);
 
-const PremiumButton = ({ onPress, children, style }: any) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const handlePressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-  const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  useEffect(() => {
+    animatedValue.value = withSpring(value, {
+      damping: 15,
+      stiffness: 100,
+    });
+  }, [value]);
+
+  const animatedText = useAnimatedStyle(() => ({
+    opacity: withTiming(1, { duration: 300 }),
+  }));
 
   return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[style, { transform: [{ scale }] }]}
-    >
-      {children}
-    </AnimatedPressable>
+    <Animated.View style={animatedText}>
+      <Text style={styles.summaryValue}>
+        {prefix}{Math.round(animatedValue.value).toLocaleString('it-IT')}{suffix}
+      </Text>
+    </Animated.View>
   );
 };
 
@@ -112,23 +121,23 @@ export default function DashboardScreen() {
             </PremiumButton>
           </View>
 
-          {/* Condensed Summary Tiles */}
-          <View style={styles.summaryBar}>
+          {/* Modern Summary Tiles with Animated Counters */}
+          <AnimatedCard delay={100} style={styles.summaryBar}>
             <View style={styles.summaryTile}>
-              <Text style={styles.summaryValue}>€{stats.value.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</Text>
+              <AnimatedCounter value={stats.value} prefix="€" />
               <Text style={styles.summaryLabel}>Valore</Text>
             </View>
             <View style={styles.tileDivider} />
             <View style={styles.summaryTile}>
-              <Text style={styles.summaryValue}>{stats.active}</Text>
+              <AnimatedCounter value={stats.active} />
               <Text style={styles.summaryLabel}>Attivi</Text>
             </View>
             <View style={styles.tileDivider} />
             <View style={styles.summaryTile}>
-              <Text style={styles.summaryValue}>{stats.draft}</Text>
+              <AnimatedCounter value={stats.draft} />
               <Text style={styles.summaryLabel}>Bozze</Text>
             </View>
-          </View>
+          </AnimatedCard>
 
           {/* Marketplace Filters */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
@@ -136,7 +145,7 @@ export default function DashboardScreen() {
               <PremiumButton
                 key={f}
                 onPress={() => setActiveFilter(f as any)}
-                style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+                style={activeFilter === f ? styles.filterChipActive : styles.filterChip}
               >
                 <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
                   {f === 'all' ? 'Tutti' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -157,8 +166,14 @@ export default function DashboardScreen() {
               </View>
             ) : (
               filteredNotifications.map((n, idx) => (
-                <View key={n.id}>
-                  <PremiumButton style={styles.listItem} onPress={() => handleNotificationPress(n)}>
+                <AnimatedCard key={n.id} delay={200 + (idx * 50)}>
+                  <PremiumButton
+                    style={styles.listItem}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      handleNotificationPress(n);
+                    }}
+                  >
                     <View style={styles.notifRow}>
                       <View style={[styles.iconBox, { backgroundColor: n.platform === 'vinted' ? '#09B1BA20' : n.platform === 'ebay' ? '#E5323820' : '#FF3B3020' }]}>
                         <FontAwesome name={getIcon(n.type) as any} size={16} color={n.platform === 'vinted' ? '#09B1BA' : n.platform === 'ebay' ? '#E53238' : '#FF3B30'} />
@@ -174,7 +189,7 @@ export default function DashboardScreen() {
                     </View>
                   </PremiumButton>
                   {idx < filteredNotifications.length - 1 && <View style={styles.divider} />}
-                </View>
+                </AnimatedCard>
               ))
             )}
           </View>
@@ -197,14 +212,21 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
   welcomeText: { fontSize: 13, fontWeight: '700', color: Colors.light.icon, textTransform: 'uppercase', letterSpacing: 0.8 },
   pageTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
-  avatarBtn: { width: 48, height: 48, borderRadius: 16, backgroundColor: Colors.light.surface, overflow: 'hidden' },
+  avatarBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.light.surface,
+    overflow: 'hidden',
+    ...Shadows.sm,
+  },
   avatarPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarImg: { width: '100%', height: '100%' },
 
   summaryBar: {
     flexDirection: 'row',
     backgroundColor: Colors.light.surface,
-    borderRadius: 24,
+    borderRadius: BorderRadius.xl,
     padding: 20,
     marginBottom: 32,
     alignItems: 'center',
@@ -216,22 +238,43 @@ const styles = StyleSheet.create({
   tileDivider: { width: 1, height: 24, backgroundColor: Colors.light.surfaceHighlight },
 
   filterBar: { gap: 10, marginBottom: 20, paddingRight: 40 },
-  filterChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
-  filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary },
+  filterChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.surfaceHighlight,
+    ...Shadows.sm,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+    ...Shadows.md,
+  },
   filterText: { fontSize: 14, fontWeight: '700', color: Colors.light.icon },
   filterTextActive: { color: '#FFFFFF' },
 
   feedContainer: {
     backgroundColor: Colors.light.background,
-    borderRadius: 28,
+    borderRadius: BorderRadius.xxl,
     borderWidth: 1,
     borderColor: Colors.light.surfaceHighlight,
     paddingVertical: 10,
     minHeight: 300,
+    ...Shadows.sm,
   },
   listItem: { padding: 18 },
   notifRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  iconBox: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16, marginTop: 4 },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    marginTop: 4,
+  },
   notifContent: { flex: 1 },
   notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   notifPlatform: { fontSize: 11, fontWeight: '900', color: Colors.light.icon, letterSpacing: 1 },

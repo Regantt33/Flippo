@@ -1,6 +1,7 @@
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
+import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
-import { Colors } from '@/constants/Colors';
+import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService } from '@/services/settings';
 import { InventoryItem, StorageService } from '@/services/storage';
@@ -9,28 +10,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const PremiumButton = ({ onPress, children, style, disabled }: any) => {
-    const scale = useRef(new Animated.Value(1)).current;
-    const handlePressIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true }).start();
-    const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-
-    return (
-        <AnimatedPressable
-            onPress={onPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={[style, { transform: [{ scale }] }]}
-            disabled={disabled}
-        >
-            {children}
-        </AnimatedPressable>
-    );
-};
 
 export default function BrowserScreen() {
     const params = useLocalSearchParams();
@@ -218,7 +199,7 @@ export default function BrowserScreen() {
                                 return (
                                     <PremiumButton
                                         key={m.id}
-                                        style={[styles.marketCard, connected && { opacity: 0.8 }]}
+                                        style={connected ? [styles.marketCard, { opacity: 0.8 }] : styles.marketCard}
                                         onPress={() => handleMarketSelection(m)}
                                     >
                                         <MarketplaceLogo id={m.id} style={styles.marketLogo} />
@@ -269,7 +250,7 @@ export default function BrowserScreen() {
                                 {marketplaces.map(m => (
                                     <PremiumButton
                                         key={m.id}
-                                        style={[styles.switcherChip, currentSite === m.id && styles.switcherChipActive]}
+                                        style={currentSite === m.id ? styles.switcherChipActive : styles.switcherChip}
                                         onPress={() => handleMarketSelection(m)}
                                     >
                                         <Text style={[styles.switcherText, currentSite === m.id && styles.switcherTextActive]}>
@@ -423,7 +404,17 @@ const styles = StyleSheet.create({
     hubSubtitle: { fontSize: 16, color: Colors.light.icon, fontWeight: '500', marginTop: 4 },
 
     hubGrid: { paddingHorizontal: 24, paddingBottom: 40 },
-    marketCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.surface, padding: 20, borderRadius: 28, marginBottom: 16, shadowColor: '#342E25', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4, borderWidth: 1, borderColor: Colors.light.surfaceHighlight },
+    marketCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.light.surface,
+        padding: 20,
+        borderRadius: BorderRadius.xxl,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: Colors.light.surfaceHighlight,
+        ...Shadows.lg,
+    },
     marketLogo: { width: 52, height: 52, borderRadius: 14, marginRight: 16 },
     marketInfo: { flex: 1 },
     marketName: { fontSize: 18, fontWeight: '800', color: Colors.light.text },
@@ -471,12 +462,29 @@ const styles = StyleSheet.create({
     actionsOverlay: { position: 'absolute', bottom: 80, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'box-none' },
     actionFab: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
     secondaryFab: { backgroundColor: Colors.light.primary },
-    compileFab: { flexDirection: 'row', paddingHorizontal: 20, height: 48, borderRadius: 24, backgroundColor: Colors.light.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, flex: 1, marginHorizontal: 12 },
+    compileFab: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        height: 48,
+        borderRadius: BorderRadius.xl,
+        backgroundColor: Colors.light.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+        marginHorizontal: 12,
+        ...Shadows.lg,
+    },
     compileBtnText: { color: '#FFF', fontWeight: '800', fontSize: 15 },
 
     // Modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: Colors.light.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 20 },
+    modalContent: {
+        backgroundColor: Colors.light.background,
+        borderTopLeftRadius: BorderRadius.xxl,
+        borderTopRightRadius: BorderRadius.xxl,
+        height: '70%',
+        ...Shadows.xl,
+    },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: Colors.light.surfaceHighlight },
     modalTitle: { fontSize: 20, fontWeight: '900', color: Colors.light.text },
     inventoryList: { padding: 20, paddingBottom: 60 },

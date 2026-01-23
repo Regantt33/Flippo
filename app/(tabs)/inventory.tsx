@@ -1,30 +1,12 @@
+import { AnimatedCard } from '@/components/AnimatedCard';
+import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
-import { Colors } from '@/constants/Colors';
+import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
 import { InventoryItem, StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Alert, Animated, FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const PremiumButton = ({ onPress, children, style, disabled }: any) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const handlePressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-  const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[style, { transform: [{ scale }] }]}
-      disabled={disabled}
-    >
-      {children}
-    </AnimatedPressable>
-  );
-};
+import { useCallback, useState } from 'react';
+import { Alert, FlatList, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -58,56 +40,58 @@ export default function InventoryScreen() {
     i.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const renderItem = ({ item }: { item: InventoryItem }) => {
+  const renderItem = ({ item, index }: { item: InventoryItem; index: number }) => {
     const mainImage = item.images && item.images.length > 0 ? { uri: item.images[0] } : null;
 
     return (
-      <View style={styles.itemCard}>
-        <View style={styles.imageBox}>
-          {mainImage ? (
-            <Image source={mainImage} style={styles.itemImage} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <FontAwesome name="image" size={20} color="#C7C7CC" />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.itemPrice}>€{parseFloat(item.price).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
-
-          <View style={styles.mkContainer}>
-            {item.listedOn?.map(id => (
-              <View key={id} style={[styles.mkDot, { backgroundColor: id === 'vinted' ? '#09B1BA' : id === 'ebay' ? '#E53238' : '#FF3B30' }]} />
-            ))}
-            {(!item.listedOn || item.listedOn.length === 0) && (
-              <Text style={styles.notListedText}>Non pubblicato</Text>
+      <AnimatedCard delay={index * 50}>
+        <View style={styles.itemCard}>
+          <View style={styles.imageBox}>
+            {mainImage ? (
+              <Image source={mainImage} style={styles.itemImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <FontAwesome name="image" size={20} color="#C7C7CC" />
+              </View>
             )}
           </View>
-        </View>
 
-        <View style={styles.actions}>
-          <PremiumButton
-            style={[styles.actionBtn, { backgroundColor: Colors.light.surface }]}
-            onPress={() => router.push({ pathname: '/new-item', params: { id: item.id } })}
-          >
-            <FontAwesome name="pencil" size={12} color="#8E8E93" />
-          </PremiumButton>
-          <PremiumButton
-            style={[styles.actionBtn, { backgroundColor: Colors.light.primary + '10' }]}
-            onPress={() => router.push({ pathname: '/new-item', params: { id: item.id, openWizard: 'true' } })}
-          >
-            <FontAwesome name="rocket" size={12} color={Colors.light.primary} />
-          </PremiumButton>
-          <PremiumButton
-            style={[styles.actionBtn, { backgroundColor: '#FF3B3010' }]}
-            onPress={() => handleDelete(item.id)}
-          >
-            <FontAwesome name="trash-o" size={12} color="#FF3B30" />
-          </PremiumButton>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.itemPrice}>€{parseFloat(item.price).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</Text>
+
+            <View style={styles.mkContainer}>
+              {item.listedOn?.map(id => (
+                <View key={id} style={[styles.mkDot, { backgroundColor: id === 'vinted' ? '#09B1BA' : id === 'ebay' ? '#E53238' : '#FF3B30' }]} />
+              ))}
+              {(!item.listedOn || item.listedOn.length === 0) && (
+                <Text style={styles.notListedText}>Non pubblicato</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.actions}>
+            <PremiumButton
+              style={[styles.actionBtn, { backgroundColor: Colors.light.surface }]}
+              onPress={() => router.push({ pathname: '/new-item', params: { id: item.id } })}
+            >
+              <FontAwesome name="pencil" size={12} color="#8E8E93" />
+            </PremiumButton>
+            <PremiumButton
+              style={[styles.actionBtn, { backgroundColor: Colors.light.primary + '10' }]}
+              onPress={() => router.push({ pathname: '/new-item', params: { id: item.id, openWizard: 'true' } })}
+            >
+              <FontAwesome name="rocket" size={12} color={Colors.light.primary} />
+            </PremiumButton>
+            <PremiumButton
+              style={[styles.actionBtn, { backgroundColor: '#FF3B3010' }]}
+              onPress={() => handleDelete(item.id)}
+            >
+              <FontAwesome name="trash-o" size={12} color="#FF3B30" />
+            </PremiumButton>
+          </View>
         </View>
-      </View>
+      </AnimatedCard>
     )
   };
 
@@ -176,8 +160,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 24,
     paddingHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: BorderRadius.md,
     height: 52,
+    ...Shadows.sm,
   },
   searchIcon: { marginRight: 12 },
   searchInput: { flex: 1, fontSize: 16, color: Colors.light.text, fontWeight: '600' },
@@ -187,14 +172,19 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     backgroundColor: Colors.light.background,
-    borderRadius: 24,
+    borderRadius: BorderRadius.xl,
     padding: 12,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.light.surfaceHighlight,
+    ...Shadows.sm,
   },
-  imageBox: { borderRadius: 16, overflow: 'hidden', backgroundColor: Colors.light.surface },
+  imageBox: {
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: Colors.light.surface,
+  },
   itemImage: { width: 72, height: 72 },
   imagePlaceholder: { width: 72, height: 72, justifyContent: 'center', alignItems: 'center' },
 
@@ -207,12 +197,35 @@ const styles = StyleSheet.create({
   notListedText: { fontSize: 11, color: '#C7C7CC', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   actions: { flexDirection: 'row', gap: 8 },
-  actionBtn: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  actionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
 
   emptyView: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.light.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    ...Shadows.md,
+  },
   emptyTitle: { fontSize: 22, fontWeight: '900', color: Colors.light.text },
   emptySubtitle: { fontSize: 15, color: Colors.light.icon, textAlign: 'center', marginTop: 8, paddingHorizontal: 40, fontWeight: '500', lineHeight: 22 },
-  emptyBtn: { marginTop: 32, backgroundColor: '#1C1C1E', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 20 },
+  emptyBtn: {
+    marginTop: 32,
+    backgroundColor: '#1C1C1E',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.md,
+  },
   emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });

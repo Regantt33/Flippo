@@ -1,33 +1,14 @@
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
+import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
-import { Colors } from '@/constants/Colors';
+import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
 import { AuthService } from '@/services/AuthService';
 import { MarketplaceConfig, SettingsService, UserProfile } from '@/services/settings';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Alert, Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const PremiumButton = ({ onPress, children, style, disabled }: any) => {
-    const scale = useRef(new Animated.Value(1)).current;
-    const handlePressIn = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true }).start();
-    const handlePressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-
-    return (
-        <AnimatedPressable
-            onPress={onPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={[style, { transform: [{ scale }] }]}
-            disabled={disabled}
-        >
-            {children}
-        </AnimatedPressable>
-    );
-};
+import { useCallback, useState } from 'react';
+import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 export default function ProfileScreen() {
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
@@ -236,7 +217,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 24,
         marginTop: 24,
         padding: 24,
-        borderRadius: 32,
+        borderRadius: BorderRadius.xxl,
+        ...Shadows.md,
     },
     profileCardEditing: { backgroundColor: '#FEFBF8', borderWidth: 1, borderColor: Colors.light.primary + '30' },
     avatarContainer: { marginRight: 20, position: 'relative' },
@@ -249,10 +231,26 @@ const styles = StyleSheet.create({
     userEmail: { fontSize: 14, color: Colors.light.icon, fontWeight: '500', marginTop: 2 },
 
     editForm: { gap: 8 },
-    input: { backgroundColor: Colors.light.surfaceHighlight, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, fontSize: 14, fontWeight: '600', color: Colors.light.text },
+    input: {
+        backgroundColor: Colors.light.surfaceHighlight,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: BorderRadius.sm,
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.light.text,
+    },
 
     sectionHeader: { marginHorizontal: 28, marginTop: 32, marginBottom: 12, fontSize: 11, fontWeight: '800', color: '#BDB9B0', letterSpacing: 1 },
-    section: { backgroundColor: Colors.light.background, marginHorizontal: 24, borderRadius: 28, borderWidth: 1, borderColor: Colors.light.surfaceHighlight, overflow: 'hidden' },
+    section: {
+        backgroundColor: Colors.light.background,
+        marginHorizontal: 24,
+        borderRadius: BorderRadius.xxl,
+        borderWidth: 1,
+        borderColor: Colors.light.surfaceHighlight,
+        overflow: 'hidden',
+        ...Shadows.sm,
+    },
 
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
     rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
