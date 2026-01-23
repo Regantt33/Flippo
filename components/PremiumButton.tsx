@@ -37,8 +37,8 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
     const elevation = useSharedValue(0);
 
     const handlePressIn = () => {
-        scale.value = withSpring(0.96, SpringConfigs.snappy);
-        elevation.value = withSpring(2, SpringConfigs.gentle);
+        scale.value = withSpring(0.96, { damping: 12, stiffness: 200 });
+        elevation.value = withSpring(2, { damping: 15, stiffness: 100 });
 
         if (hapticFeedback && !disabled) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -84,6 +84,7 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             disabled={disabled}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={[
                 styles.base,
                 animatedStyle,

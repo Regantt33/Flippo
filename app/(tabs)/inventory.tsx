@@ -7,9 +7,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function InventoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState('');
 
@@ -98,12 +100,16 @@ export default function InventoryScreen() {
   return (
     <SwipeWrapper leftRoute="/(tabs)" rightRoute="/(tabs)/browser">
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
           <Text style={styles.headerTitle}>Inventario</Text>
           <PremiumButton style={styles.addFab} onPress={() => router.push('/new-item')}>
             <FontAwesome name="plus" size={18} color="#fff" />
           </PremiumButton>
         </View>
+
+        {/* Decorative Background Elements */}
+        <View style={styles.bgDecoration1} />
+        <View style={styles.bgDecoration2} />
 
         <View style={styles.searchBox}>
           <FontAwesome name="search" size={14} color="#8E8E93" style={styles.searchIcon} />
@@ -147,11 +153,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 20
   },
   headerTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
-  addFab: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 5 },
+  addFab: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.light.accent, justifyContent: 'center', alignItems: 'center', shadowColor: Colors.light.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },
 
   searchBox: {
     flexDirection: 'row',
@@ -221,11 +226,31 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 15, color: Colors.light.icon, textAlign: 'center', marginTop: 8, paddingHorizontal: 40, fontWeight: '500', lineHeight: 22 },
   emptyBtn: {
     marginTop: 32,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: Colors.light.accent,
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: BorderRadius.lg,
-    ...Shadows.md,
+    ...Shadows.accent,
   },
   emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  bgDecoration1: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(214, 109, 69, 0.03)',
+    zIndex: -1,
+  },
+  bgDecoration2: {
+    position: 'absolute',
+    bottom: 100,
+    left: -40,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(214, 109, 69, 0.02)',
+    zIndex: -1,
+  },
 });

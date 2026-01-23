@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const PremiumButton = ({ onPress, children, style }: any) => {
 export default function OnboardingScreen() {
     const params = useLocalSearchParams();
     const [step, setStep] = useState(1);
+    const insets = useSafeAreaInsets();
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>([]);
 
@@ -160,7 +162,7 @@ export default function OnboardingScreen() {
                 {marketplaces.map((m) => (
                     <PremiumButton
                         key={m.id}
-                        style={[styles.marketCard, m.isLoggedIn && { opacity: 0.7 }]}
+                        style={[styles.marketCard, m.isLoggedIn ? { opacity: 0.7 } : {}]}
                         onPress={() => m.isLoggedIn ? null : openLogin(m.id)}
                         disabled={m.isLoggedIn}
                     >
@@ -206,11 +208,15 @@ export default function OnboardingScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
                 <StepIndicator />
             </View>
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
+                {/* Decorative Background Elements */}
+                <View style={styles.bgDecoration1} />
+                <View style={styles.bgDecoration2} />
+
                 {step === 1 && <WelcomeStep />}
                 {step === 2 && <ProfileStep />}
                 {step === 3 && <ConnectStep />}
@@ -222,12 +228,12 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FEFBF8' },
-    header: { paddingTop: 60, alignItems: 'center' },
+    header: { alignItems: 'center', paddingBottom: 20 },
     content: { flex: 1, paddingHorizontal: 32, justifyContent: 'center' },
 
     indicatorContainer: { flexDirection: 'row', gap: 8 },
     indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.light.surfaceHighlight },
-    indicatorActive: { width: 24, backgroundColor: Colors.light.primary },
+    indicatorActive: { width: 24, backgroundColor: Colors.light.accent },
 
     stepContainer: { alignItems: 'center', width: '100%' },
     heroImageContainer: { width: 200, height: 200, justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
@@ -261,4 +267,24 @@ const styles = StyleSheet.create({
     mainBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
 
     successIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#34C759', justifyContent: 'center', alignItems: 'center', marginBottom: 40, shadowColor: '#34C759', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 },
+    bgDecoration1: {
+        position: 'absolute',
+        top: -40,
+        left: -40,
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: 'rgba(214, 109, 69, 0.03)',
+        zIndex: -1,
+    },
+    bgDecoration2: {
+        position: 'absolute',
+        bottom: 20,
+        right: -60,
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        backgroundColor: 'rgba(214, 109, 69, 0.02)',
+        zIndex: -1,
+    },
 });

@@ -47,7 +47,56 @@ export const Colors = {
 };
 
 /**
- * Shadow Presets - Modern, layered shadows
+ * Gradient Definitions - Premium Visual Design
+ */
+export const Gradients = {
+  // Card backgrounds
+  warmSurface: ['#F5F2ED', '#FEFBF8'] as const,
+  surfaceElevated: ['#FEFBF8', '#F5F2ED', '#EBE8E1'] as const,
+
+  // Accent gradients
+  accentWarm: ['#D66D45', '#E88B6A'] as const,
+  accentSubtle: ['rgba(214, 109, 69, 0.15)', 'rgba(214, 109, 69, 0.05)'] as const,
+  accentGlow: ['rgba(214, 109, 69, 0.3)', 'rgba(214, 109, 69, 0)'] as const,
+
+  // Dark/overlay gradients
+  blackOverlay: ['rgba(28, 28, 30, 0)', 'rgba(28, 28, 30, 0.7)'] as const,
+  darkElevated: ['#1C1C1E', '#2C2C30'] as const,
+
+  // Shimmer for loaders
+  shimmer: ['transparent', 'rgba(255, 255, 255, 0.4)', 'transparent'] as const,
+
+  // Hero sections
+  hero: {
+    warm: ['#FEFBF8', '#F5F2ED'] as const,
+    accent: ['#D66D45', '#C47E5A'] as const,
+  },
+};
+
+/**
+ * Border Radius Scale - More dramatic hierarchy
+ */
+export const BorderRadius = {
+  xs: 8,
+  sm: 14,
+  md: 18,
+  lg: 22,
+  xl: 26,
+  xxl: 32,
+  full: 9999,
+};
+
+/**
+ * Blur Intensity - For backdrop effects
+ */
+export const BlurIntensity = {
+  subtle: 10,
+  medium: 20,
+  strong: 40,
+};
+
+/**
+ * Shadow Presets - Deeper, more pronounced for WOW
  */
 export const Shadows = {
   none: {
@@ -59,77 +108,98 @@ export const Shadows = {
   },
   sm: {
     shadowColor: '#342E25',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   md: {
     shadowColor: '#342E25',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
   },
   lg: {
     shadowColor: '#342E25',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
   xl: {
     shadowColor: '#342E25',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 16,
+  },
+  // Colored shadows for accents
+  accent: {
+    shadowColor: '#D66D45',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
 };
 
 /**
- * Opacity Variants - For glassmorphism effects
+ * Typography Scale - More dramatic
  */
-export const Opacity = {
-  glass: {
-    background: 'rgba(254, 251, 248, 0.85)',
-    surface: 'rgba(245, 242, 237, 0.9)',
-    overlay: 'rgba(28, 28, 30, 0.4)',
-    strong: 'rgba(28, 28, 30, 0.75)',
+export const Typography = {
+  display: {
+    fontSize: 36,
+    fontWeight: '900' as const,
+    letterSpacing: -1.5,
+    lineHeight: 42,
   },
-  subtle: {
-    border: 'rgba(28, 28, 30, 0.08)',
-    divider: 'rgba(28, 28, 30, 0.06)',
+  h1: {
+    fontSize: 32,
+    fontWeight: '900' as const,
+    letterSpacing: -1,
+    lineHeight: 38,
+  },
+  h2: {
+    fontSize: 24,
+    fontWeight: '800' as const,
+    letterSpacing: -0.5,
+    lineHeight: 30,
+  },
+  h3: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    letterSpacing: -0.3,
+    lineHeight: 26,
+  },
+  body: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    letterSpacing: 0,
+    lineHeight: 22,
+  },
+  caption: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
+    lineHeight: 18,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    letterSpacing: 1,
+    textTransform: 'uppercase' as const,
   },
 };
 
 /**
- * Gradient Definitions - Subtle depth
+ * Spacing Scale - More generous
  */
-export const Gradients = {
-  warmSurface: [warmSurface, '#EBE8E1'],
-  accentSubtle: [aestheticOrange + '20', aestheticOrange + '05'],
-  blackOverlay: ['transparent', 'rgba(28, 28, 30, 0.6)'],
-};
-
-/**
- * Border Radius Scale - Modern hierarchy
- */
-export const BorderRadius = {
+export const Spacing = {
   xs: 8,
   sm: 12,
-  md: 16,
-  lg: 20,
-  xl: 24,
-  xxl: 28,
-  full: 9999,
-};
-
-/**
- * Blur Intensity - For backdrop effects
- */
-export const BlurIntensity = {
-  subtle: 10,
-  medium: 20,
-  strong: 40,
+  md: 20,
+  lg: 28,
+  xl: 36,
+  xxl: 48,
 };

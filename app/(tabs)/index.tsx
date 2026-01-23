@@ -1,16 +1,19 @@
 import { AnimatedCard } from '@/components/AnimatedCard';
+import { GradientCard } from '@/components/GradientCard';
 import { PremiumButton } from '@/components/PremiumButton';
 import { SwipeWrapper } from '@/components/SwipeWrapper';
-import { BorderRadius, Colors, Shadows } from '@/constants/Colors';
+import { BorderRadius, Colors, Gradients, Shadows, Spacing, Typography } from '@/constants/Colors';
 import { GmailService, SellyNotification } from '@/services/gmail';
 import { SettingsService, UserProfile } from '@/services/settings';
 import { StorageService } from '@/services/storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Animated Counter Component
 const AnimatedCounter = ({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) => {
@@ -43,6 +46,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'vinted' | 'ebay' | 'subito'>('all');
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(useCallback(() => {
     loadData();
@@ -98,46 +102,60 @@ export default function DashboardScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.primary} />}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Image
-                source={require('@/assets/images/selly-logo.png')}
-                style={{ width: 40, height: 40, marginBottom: 8 }}
-                resizeMode="contain"
-              // tintColor="#1C1C1E" // Optional: if logo is black, no need. If it's multi-color, keep original.
-              />
-              <Text style={styles.welcomeText}>BENTORNATA,</Text>
-              <Text style={styles.pageTitle}>{profile?.name}</Text>
-            </View>
-            <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
-              {profile?.avatar ? (
-                <Image source={{ uri: profile.avatar }} style={styles.avatarImg} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: Colors.light.primary + '15' }]}>
-                  <FontAwesome name="user-o" size={18} color={Colors.light.primary} />
+          {/* Decorative Background Elements */}
+          <View style={styles.bgDecoration1} />
+          <View style={styles.bgDecoration2} />
+          <View style={styles.bgDecoration3} />
+          {/* Hero Header - Refined and Integrated */}
+          <View style={[styles.heroHeader, { paddingTop: Math.max(insets.top, Spacing.md) }]}>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Image
+                  source={require('@/assets/images/selly-logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+                <View>
+                  <Text style={styles.welcomeText}>BENTORNATA</Text>
+                  <Text style={styles.heroTitle}>{profile?.name || 'Seller'}</Text>
                 </View>
-              )}
-            </PremiumButton>
+              </View>
+              <PremiumButton onPress={() => router.push('/(tabs)/profile')} style={styles.avatarBtn}>
+                <LinearGradient
+                  colors={Gradients.accentWarm}
+                  style={styles.avatarGradient}
+                >
+                  {profile?.avatar ? (
+                    <Image source={{ uri: profile.avatar }} style={styles.avatarImg} />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <FontAwesome name="user" size={20} color="#FFF" />
+                    </View>
+                  )}
+                </LinearGradient>
+              </PremiumButton>
+            </View>
           </View>
 
-          {/* Modern Summary Tiles with Animated Counters */}
-          <AnimatedCard delay={100} style={styles.summaryBar}>
-            <View style={styles.summaryTile}>
-              <AnimatedCounter value={stats.value} prefix="€" />
-              <Text style={styles.summaryLabel}>Valore</Text>
+          {/* Premium Stats Row */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statsRow}>
+              <GradientCard variant="accent" style={styles.statCardSmall}>
+                <FontAwesome name="shopping-bag" size={18} color="#FFF" style={{ marginBottom: 8 }} />
+                <View style={styles.counterRow}>
+                  <AnimatedCounter value={stats.active} />
+                  <Text style={[styles.statLabelSmall, { color: 'rgba(255,255,255,0.8)' }]}> ATTIVI</Text>
+                </View>
+              </GradientCard>
+              <GradientCard variant="surface" style={styles.statCardSmall}>
+                <FontAwesome name="file-text-o" size={18} color={Colors.light.text} style={{ marginBottom: 8 }} />
+                <View style={styles.counterRow}>
+                  <AnimatedCounter value={stats.draft} />
+                  <Text style={styles.statLabelSmall}> BOZZE</Text>
+                </View>
+              </GradientCard>
             </View>
-            <View style={styles.tileDivider} />
-            <View style={styles.summaryTile}>
-              <AnimatedCounter value={stats.active} />
-              <Text style={styles.summaryLabel}>Attivi</Text>
-            </View>
-            <View style={styles.tileDivider} />
-            <View style={styles.summaryTile}>
-              <AnimatedCounter value={stats.draft} />
-              <Text style={styles.summaryLabel}>Bozze</Text>
-            </View>
-          </AnimatedCard>
+          </View>
 
           {/* Marketplace Filters */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
@@ -145,7 +163,7 @@ export default function DashboardScreen() {
               <PremiumButton
                 key={f}
                 onPress={() => setActiveFilter(f as any)}
-                style={activeFilter === f ? styles.filterChipActive : styles.filterChip}
+                style={[styles.filterChip, activeFilter === f ? styles.filterChipActive : {}]}
               >
                 <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
                   {f === 'all' ? 'Tutti' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -207,37 +225,137 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FEFBF8' },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 150 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
-  welcomeText: { fontSize: 13, fontWeight: '700', color: Colors.light.icon, textTransform: 'uppercase', letterSpacing: 0.8 },
-  pageTitle: { fontSize: 32, fontWeight: '900', color: Colors.light.text, letterSpacing: -1 },
-  avatarBtn: {
+  container: { flex: 1, backgroundColor: Colors.light.background },
+  bgDecoration1: {
+    position: 'absolute',
+    top: -50,
+    right: -20,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(214, 109, 69, 0.03)',
+    zIndex: -1,
+  },
+  bgDecoration2: {
+    position: 'absolute',
+    top: 400,
+    left: -60,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(214, 109, 69, 0.02)',
+    zIndex: -1,
+  },
+  bgDecoration3: {
+    position: 'absolute',
+    bottom: 200,
+    right: -40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 1,
+    borderColor: 'rgba(214, 109, 69, 0.05)',
+    zIndex: -1,
+  },
+  scrollContent: { paddingBottom: 150 },
+
+  // Hero Header with Gradient
+  heroHeader: {
+    paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  logo: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.light.surface,
+  },
+  welcomeText: {
+    ...Typography.label,
+    color: Colors.light.icon,
+    marginBottom: 4,
+  },
+  heroTitle: {
+    ...Typography.display,
+    color: Colors.light.text,
+  },
+  avatarBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    ...Shadows.sm,
   },
-  avatarPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  avatarImg: { width: '100%', height: '100%' },
-
-  summaryBar: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.surface,
-    borderRadius: BorderRadius.xl,
-    padding: 20,
-    marginBottom: 32,
+  avatarGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    padding: 3,
   },
-  summaryTile: { flex: 1, alignItems: 'center' },
-  summaryValue: { fontSize: 18, fontWeight: '900', color: Colors.light.text },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: Colors.light.icon, marginTop: 4, textTransform: 'uppercase' },
-  tileDivider: { width: 1, height: 24, backgroundColor: Colors.light.surfaceHighlight },
+  avatarPlaceholder: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.md,
+  },
 
-  filterBar: { gap: 10, marginBottom: 20, paddingRight: 40 },
+  // Premium Stats Grid
+  statsGrid: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+    gap: 16,
+  },
+  statCardLarge: {
+    padding: Spacing.lg,
+    alignItems: 'center',
+    minHeight: 160,
+    justifyContent: 'center',
+  },
+  statIcon: {
+    marginBottom: 12,
+  },
+  statLabel: {
+    ...Typography.caption,
+    color: Colors.light.icon,
+    marginTop: 8,
+    textTransform: 'uppercase',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  statCardSmall: {
+    flex: 1,
+    padding: Spacing.md,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  statLabelSmall: {
+    ...Typography.label,
+    color: Colors.light.icon,
+    fontSize: 10,
+  },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  // Filters
+  filterBar: { gap: 12, marginBottom: Spacing.md, paddingHorizontal: Spacing.lg, paddingRight: 40 },
   filterChip: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -248,40 +366,105 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   filterChipActive: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
-    ...Shadows.md,
+    backgroundColor: Colors.light.accent,
+    borderColor: Colors.light.accent,
+    ...Shadows.accent,
   },
   filterText: { fontSize: 14, fontWeight: '700', color: Colors.light.icon },
   filterTextActive: { color: '#FFFFFF' },
 
+  // Feed Container
   feedContainer: {
     backgroundColor: Colors.light.background,
     borderRadius: BorderRadius.xxl,
     borderWidth: 1,
     borderColor: Colors.light.surfaceHighlight,
-    paddingVertical: 10,
+    paddingVertical: 12,
     minHeight: 300,
+    marginHorizontal: Spacing.lg,
     ...Shadows.sm,
   },
-  listItem: { padding: 18 },
-  notifRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    marginTop: 4,
+
+  // Notification Cards - Premium
+  notifCard: {
+    padding: Spacing.md,
   },
-  notifContent: { flex: 1 },
-  notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  notifPlatform: { fontSize: 11, fontWeight: '900', color: Colors.light.icon, letterSpacing: 1 },
-  itemTime: { fontSize: 11, color: '#C7C7CC', fontWeight: '600' },
-  itemTitle: { fontSize: 16, fontWeight: '800', color: Colors.light.text, marginBottom: 2 },
-  itemSubtitle: { fontSize: 14, color: Colors.light.icon, fontWeight: '500' },
-  divider: { height: 1, backgroundColor: Colors.light.surfaceHighlight, marginHorizontal: 18 },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  iconGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.md,
+  },
+  notifContent: {
+    flex: 1,
+  },
+  notifTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  notifTitle: {
+    ...Typography.h3,
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  notifBody: {
+    ...Typography.body,
+    color: Colors.light.icon,
+  },
+
+  // Backward compatibility styles
+  summaryValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: 'inherit',
+    letterSpacing: -0.5,
+  },
+  itemTime: {
+    fontSize: 11,
+    color: Colors.light.icon,
+    fontWeight: '600',
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  itemSubtitle: {
+    fontSize: 14,
+    color: Colors.light.icon,
+    fontWeight: '500',
+  },
+  notifPlatform: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: Colors.light.icon,
+    letterSpacing: 1,
+    textTransform: 'uppercase' as const,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.light.surfaceHighlight,
+    marginHorizontal: Spacing.md,
+  },
+  listItem: {
+    padding: Spacing.md,
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   emptyFeed: { padding: 60, alignItems: 'center', justifyContent: 'center' },
   emptyIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.light.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },

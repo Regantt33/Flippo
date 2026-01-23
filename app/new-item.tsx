@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MarketplaceLogo } from '@/components/MarketplaceLogo';
 
@@ -70,6 +71,7 @@ const CONDITIONS = [
 
 export default function NewItemScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const params = useLocalSearchParams();
     const [images, setImages] = useState<string[]>([]);
 
@@ -218,7 +220,7 @@ export default function NewItemScreen() {
     return (
         <View style={styles.container}>
             {/* Header with Glass effect feel */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
                 <PremiumButton style={styles.headerBtn} onPress={() => router.back()}>
                     <FontAwesome name="chevron-left" size={16} color="#1C1C1E" />
                 </PremiumButton>
@@ -234,6 +236,9 @@ export default function NewItemScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 120 }}
                 >
+                    {/* Decorative Background Elements */}
+                    <View style={styles.bgDecoration1} />
+                    <View style={styles.bgDecoration2} />
                     {/* 1. MEDIA SECTION */}
                     <View style={styles.imageSection}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageScroll}>
@@ -263,7 +268,7 @@ export default function NewItemScreen() {
                                 {CATEGORIES.map(item => (
                                     <PremiumButton
                                         key={item.label}
-                                        style={[styles.catChip, category === item.id && styles.catChipActive]}
+                                        style={[styles.catChip, category === item.id ? styles.catChipActive : {}]}
                                         onPress={() => setCategory(item.id)}
                                     >
                                         <FontAwesome name={item.icon} size={14} color={category === item.id ? '#FFF' : '#1C1C1E'} />
@@ -442,7 +447,7 @@ const styles = StyleSheet.create({
 
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
+        paddingHorizontal: 20, paddingBottom: 16,
         backgroundColor: '#FEFBF8', borderBottomWidth: 1, borderBottomColor: '#F0F0F0'
     },
     headerTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
@@ -469,7 +474,7 @@ const styles = StyleSheet.create({
 
     // Grid Chips
     catChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F7', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, marginBottom: 4 },
-    catChipActive: { backgroundColor: '#1C1C1E' },
+    catChipActive: { backgroundColor: Colors.light.accent },
     catText: { fontSize: 12, fontWeight: '600', marginLeft: 6, color: '#1C1C1E' },
     catTextActive: { color: '#FFF' },
 
@@ -505,5 +510,25 @@ const styles = StyleSheet.create({
     wizName: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
     wizStatus: { fontSize: 12, color: '#8E8E93', fontWeight: '500' },
     wizardClose: { paddingVertical: 12 },
-    wizardCloseText: { fontSize: 15, fontWeight: '600', color: '#8E8E93' }
+    wizardCloseText: { fontSize: 15, fontWeight: '600', color: '#8E8E93' },
+    bgDecoration1: {
+        position: 'absolute',
+        top: 100,
+        right: -50,
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: 'rgba(214, 109, 69, 0.03)',
+        zIndex: -1,
+    },
+    bgDecoration2: {
+        position: 'absolute',
+        bottom: 50,
+        left: -80,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        backgroundColor: 'rgba(214, 109, 69, 0.02)',
+        zIndex: -1,
+    },
 });
